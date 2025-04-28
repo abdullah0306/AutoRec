@@ -1,0 +1,145 @@
+{
+  "Common": {
+    "email": "Email",
+    "emailPlaceholder": "name@example.com",
+    "password": "Password",
+    "firstName": "First name",
+    "lastName": "Last name",
+    "invalidEmail": "Invalid email address",
+    "passwordMinLength": "Password must be at least 6 characters",
+    "errorTitle": "Error",
+    "successTitle": "Success",
+    "orContinueWith": "Or continue with",
+    "backToLogin": "Back to login",
+    "somethingWentWrong": "Something went wrong",
+    "getStarted": "Get Started",
+    "learnMore": "Learn More",
+    "loading": "Loading...",
+    "retry": "Retry"
+  },
+  "Auth": {
+    "agreement": "By continuing, you agree to our",
+    "terms": "Terms of Service",
+    "and": "and",
+    "privacy": "Privacy Policy"
+  },
+  "LoginPage": {
+    "title": "Welcome back",
+    "subtitle": "Enter your credentials to access your account",
+    "forgotPassword": "Forgot password?",
+    "signIn": "Sign In",
+    "noAccount": "Don't have an account?",
+    "signUp": "Sign Up",
+    "successMessage": "You have been logged in successfully.",
+    "loginFailedTitle": "Login Failed",
+    "unexpectedError": "An unexpected error occurred. Please try again."
+  },
+  "RegisterPage": {
+    "title": "Create an account",
+    "subtitle": "Enter your details to create your account",
+    "firstNamePlaceholder": "John",
+    "lastNamePlaceholder": "Doe",
+    "createAccount": "Create Account",
+    "alreadyHaveAccount": "Already have an account?",
+    "firstNameRequired": "First name is required",
+    "lastNameRequired": "Last name is required",
+    "successMessage": "Account created successfully. Please log in.",
+    "registrationFailed": "Registration failed"
+  },
+  "ForgotPasswordPage": {
+    "title": "Forgot your password?",
+    "subtitle": "Enter your email address and we'll send you instructions to reset your password.",
+    "emailLabel": "Email address",
+    "sendResetInstructions": "Send reset instructions",
+    "checkEmailTitle": "Check your email",
+    "checkEmailDescription": "If an account exists, we've sent you instructions to reset your password."
+  },
+  "Marketing": {
+    "hero": {
+      "newFeature": "New Feature",
+      "aiPowered": "AI-Powered Data Extraction",
+      "title": "Website Scraping",
+      "titleHighlight": "Reimagined",
+      "subtitle": "Extract structured data from any website with our advanced AI-powered scraping tool. Perfect for market research, lead generation, and content monitoring.",
+      "startToday": "Start extracting data today",
+      "benefits": {
+        "noCreditCard": "No credit card required",
+        "freePlan": "Free plan available",
+        "apiAccess": "Full API access",
+        "exportFormats": "Export to multiple formats"
+      },
+      "cta": {
+        "getStarted": "Get Started",
+        "documentation": "View Documentation"
+      },
+      "features": {
+        "structuredData": {
+          "title": "Structured Data",
+          "description": "Extract data in JSON, CSV, or any format you need"
+        },
+        "simpleApi": {
+          "title": "Simple API",
+          "description": "Integrate with your apps through our REST API"
+        },
+        "anyWebsite": {
+          "title": "Any Website",
+          "description": "Works with dynamic JS sites and complex structures"
+        }
+      }
+    },
+    "features": {
+      "title": "Powerful Features",
+      "subtitle": "Everything you need to extract structured data from any website with ease",
+      "items": {
+        "dataExtraction": {
+          "title": "Smart Data Extraction",
+          "description": "Our AI-powered system identifies and extracts structured data from any website, even from dynamic JavaScript-rendered content."
+        },
+        "exportFormats": {
+          "title": "Multiple Export Formats",
+          "description": "Export your scraped data in JSON, CSV, Excel, or directly to your database through our API."
+        },
+        "developerApi": {
+          "title": "Developer Friendly API",
+          "description": "Integrate with your applications using our well-documented REST API with examples in multiple programming languages."
+        },
+        "cloudProcessing": {
+          "title": "Cloud Processing",
+          "description": "All processing happens in our cloud, meaning you don't need to worry about proxies, IP blocking, or server resources."
+        },
+        "monitoring": {
+          "title": "Real-time Monitoring",
+          "description": "Monitor your scraping jobs in real-time with detailed statistics and logs."
+        },
+        "scheduling": {
+          "title": "Scheduled Scraping",
+          "description": "Set up recurring scraping jobs to automatically gather fresh data at your preferred intervals."
+        }
+      }
+    },
+    "pricing": {
+      "title": "Simple, Transparent Pricing",
+      "subtitle": "Choose the plan that's right for you. All plans include a 14-day free trial.",
+      "currentPlan": "Current Plan",
+      "comingSoon": "Coming Soon",
+      "month": "/month",
+      "features": {
+        "monthlyScrapes": "monthly scrapes",
+        "urlsPerBatch": "URLs per batch",
+        "pagesPerSite": "pages per site",
+        "concurrentSites": "concurrent sites",
+        "monthlyEmails": "monthly emails",
+        "emailsPerSite": "emails per site"
+      },
+      "cta": {
+        "getStarted": "Get Started",
+        "manageSubscription": "Manage Subscription"
+      },
+      "enterprise": {
+        "description": "Need a custom plan for your enterprise? Contact us for tailored solutions.",
+        "contactSales": "Contact Sales"
+      },
+      "loading": "Loading pricing plans..."
+    }
+  }
+}

@@ -1,0 +1,145 @@
+{
+  "Common": {
+    "email": "E-Mail",
+    "emailPlaceholder": "name@beispiel.de",
+    "password": "Passwort",
+    "firstName": "Vorname",
+    "lastName": "Nachname",
+    "invalidEmail": "Ungültige E-Mail-Adresse",
+    "passwordMinLength": "Das Passwort muss mindestens 6 Zeichen lang sein",
+    "errorTitle": "Fehler",
+    "successTitle": "Erfolg",
+    "orContinueWith": "Oder fortfahren mit",
+    "backToLogin": "Zurück zur Anmeldung",
+    "somethingWentWrong": "Etwas ist schief gelaufen",
+    "getStarted": "Loslegen",
+    "learnMore": "Mehr erfahren",
+    "loading": "Wird geladen...",
+    "retry": "Wiederholen"
+  },
+  "Auth": {
+    "agreement": "Durch Fortfahren stimmen Sie unseren",
+    "terms": "Nutzungsbedingungen",
+    "and": "und",
+    "privacy": "Datenschutzrichtlinien zu"
+  },
+  "LoginPage": {
+    "title": "Willkommen zurück",
+    "subtitle": "Geben Sie Ihre Anmeldeinformationen ein, um auf Ihr Konto zuzugreifen",
+    "forgotPassword": "Passwort vergessen?",
+    "signIn": "Anmelden",
+    "noAccount": "Haben Sie noch kein Konto?",
+    "signUp": "Registrieren",
+    "successMessage": "Sie wurden erfolgreich angemeldet.",
+    "loginFailedTitle": "Anmeldung fehlgeschlagen",
+    "unexpectedError": "Ein unerwarteter Fehler ist aufgetreten. Bitte versuchen Sie es erneut."
+  },
+  "RegisterPage": {
+    "title": "Konto erstellen",
+    "subtitle": "Geben Sie Ihre Daten ein, um Ihr Konto zu erstellen",
+    "firstNamePlaceholder": "Max",
+    "lastNamePlaceholder": "Mustermann",
+    "createAccount": "Konto erstellen",
+    "alreadyHaveAccount": "Haben Sie bereits ein Konto?",
+    "firstNameRequired": "Vorname ist erforderlich",
+    "lastNameRequired": "Nachname ist erforderlich",
+    "successMessage": "Konto erfolgreich erstellt. Bitte melden Sie sich an.",
+    "registrationFailed": "Registrierung fehlgeschlagen"
+  },
+  "ForgotPasswordPage": {
+    "title": "Passwort vergessen?",
+    "subtitle": "Geben Sie Ihre E-Mail-Adresse ein, und wir senden Ihnen Anweisungen zum Zurücksetzen Ihres Passworts.",
+    "emailLabel": "E-Mail-Adresse",
+    "sendResetInstructions": "Anweisungen senden",
+    "checkEmailTitle": "Prüfen Sie Ihre E-Mails",
+    "checkEmailDescription": "Wenn ein Konto existiert, haben wir Ihnen Anweisungen zum Zurücksetzen Ihres Passworts gesendet."
+  },
+  "Marketing": {
+    "hero": {
+      "newFeature": "Neues Feature",
+      "aiPowered": "KI-gestützte Datenextraktion",
+      "title": "Website Scraping",
+      "titleHighlight": "Neu gedacht",
+      "subtitle": "Extrahieren Sie strukturierte Daten von jeder Website mit unserem fortschrittlichen KI-gestützten Scraping-Tool. Perfekt für Marktforschung, Lead-Generierung und Content-Monitoring.",
+      "startToday": "Starten Sie noch heute mit der Datenextraktion",
+      "benefits": {
+        "noCreditCard": "Keine Kreditkarte erforderlich",
+        "freePlan": "Kostenloser Plan verfügbar",
+        "apiAccess": "Voller API-Zugriff",
+        "exportFormats": "Export in verschiedene Formate"
+      },
+      "cta": {
+        "getStarted": "Jetzt starten",
+        "documentation": "Dokumentation ansehen"
+      },
+      "features": {
+        "structuredData": {
+          "title": "Strukturierte Daten",
+          "description": "Daten in JSON, CSV oder jedem gewünschten Format extrahieren"
+        },
+        "simpleApi": {
+          "title": "Einfache API",
+          "description": "Integration mit Ihren Anwendungen über unsere REST-API"
+        },
+        "anyWebsite": {
+          "title": "Jede Website",
+          "description": "Funktioniert mit dynamischen JS-Seiten und komplexen Strukturen"
+        }
+      }
+    },
+    "features": {
+      "title": "Leistungsstarke Funktionen",
+      "subtitle": "Alles, was Sie brauchen, um strukturierte Daten von jeder Website mühelos zu extrahieren",
+      "items": {
+        "dataExtraction": {
+          "title": "Intelligente Datenextraktion",
+          "description": "Unser KI-gesteuertes System identifiziert und extrahiert strukturierte Daten von jeder Website, auch von dynamischen JavaScript-gerenderten Inhalten."
+        },
+        "exportFormats": {
+          "title": "Mehrere Exportformate",
+          "description": "Exportieren Sie Ihre gescrapten Daten in JSON, CSV, Excel oder direkt in Ihre Datenbank über unsere API."
+        },
+        "developerApi": {
+          "title": "Entwicklerfreundliche API",
+          "description": "Integrieren Sie mit Ihren Anwendungen über unsere gut dokumentierte REST-API mit Beispielen in mehreren Programmiersprachen."
+        },
+        "cloudProcessing": {
+          "title": "Cloud-Verarbeitung",
+          "description": "Die gesamte Verarbeitung erfolgt in unserer Cloud, d.h. Sie müssen sich keine Gedanken über Proxys, IP-Blocking oder Serverressourcen machen."
+        },
+        "monitoring": {
+          "title": "Echtzeit-Überwachung",
+          "description": "Überwachen Sie Ihre Scraping-Jobs in Echtzeit mit detaillierten Statistiken und Protokollen."
+        },
+        "scheduling": {
+          "title": "Geplantes Scraping",
+          "description": "Richten Sie wiederkehrende Scraping-Jobs ein, um automatisch neue Daten in Ihren bevorzugten Intervallen zu sammeln."
+        }
+      }
+    },
+    "pricing": {
+      "title": "Einfache, transparente Preisgestaltung",
+      "subtitle": "Wählen Sie den Plan, der zu Ihnen passt. Alle Pläne beinhalten eine 14-tägige kostenlose Testversion.",
+      "currentPlan": "Aktueller Plan",
+      "comingSoon": "Demnächst verfügbar",
+      "month": "/Monat",
+      "features": {
+        "monthlyScrapes": "monatliche Scrapes",
+        "urlsPerBatch": "URLs pro Batch",
+        "pagesPerSite": "Seiten pro Website",
+        "concurrentSites": "gleichzeitige Websites",
+        "monthlyEmails": "monatliche E-Mails",
+        "emailsPerSite": "E-Mails pro Website"
+      },
+      "cta": {
+        "getStarted": "Jetzt starten",
+        "manageSubscription": "Abonnement verwalten"
+      },
+      "enterprise": {
+        "description": "Benötigen Sie einen maßgeschneiderten Plan für Ihr Unternehmen? Kontaktieren Sie uns für maßgeschneiderte Lösungen.",
+        "contactSales": "Vertrieb kontaktieren"
+      },
+      "loading": "Preispläne werden geladen..."
+    }
+  }
+}

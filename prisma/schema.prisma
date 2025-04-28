@@ -1,0 +1,63 @@
+// This is your Prisma schema file
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "postgresql"
+  url      = env("DATABASE_URL")
+}
+
+model User {
+  id                      String        @id @default(uuid())
+  username                String        @unique
+  email                   String        @unique
+  hashedPassword         String
+  firstName              String?
+  lastName               String?
+  age                    Int?
+  isActive              Boolean       @default(true)
+  createdAt             DateTime      @default(now())
+  updatedAt             DateTime      @updatedAt
+  emailVerified         Boolean       @default(false)
+  emailVerificationToken String?      @unique
+  emailVerificationExpiry DateTime?
+  subscription          Subscription?
+
+  @@map("users") // This sets the actual table name in PostgreSQL
+}
+
+model Package {
+  id                 String        @id @default(uuid())
+  name               String        @unique
+  description        String
+  price             Float
+  maxMonthlyScrapes Int
+  maxUrlsPerBatch   Int
+  maxPagesPerSite   Int
+  concurrentSites   Int
+  maxMonthlyEmails  Int          @default(1000)
+  maxEmailsPerSite  Int          @default(50)
+  isActive         Boolean       @default(true)
+  createdAt        DateTime      @default(now())
+  subscriptions    Subscription[]
+
+  @@map("packages")
+}
+
+model Subscription {
+  id                String    @id @default(uuid())
+  userId           String    @unique // One-to-one with User
+  packageId        String
+  startDate        DateTime  @default(now())
+  endDate          DateTime?
+  isActive         Boolean   @default(true)
+  monthlyUsage     Int       @default(0)
+  monthlyEmailUsage Int      @default(0)
+  lastUsageReset   DateTime  @default(now())
+
+  user             User      @relation(fields: [userId], references: [id])
+  package          Package   @relation(fields: [packageId], references: [id])
+
+  @@map("subscriptions")
+}
