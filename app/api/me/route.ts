@@ -28,14 +28,24 @@ export async function GET(req: Request) {
         subscription: {
           select: {
             id: true,
-            status: true,
+            isActive: true,
+            startDate: true,
+            endDate: true,
+            monthlyUsage: true,
+            monthlyEmailUsage: true,
+            lastUsageReset: true,
             package: {
               select: {
                 id: true,
                 name: true,
                 description: true,
                 price: true,
-                duration_days: true,
+                maxMonthlyScrapes: true,
+                maxUrlsPerBatch: true,
+                maxPagesPerSite: true,
+                concurrentSites: true,
+                maxMonthlyEmails: true,
+                maxEmailsPerSite: true
               }
             }
           }

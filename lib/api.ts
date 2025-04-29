@@ -1,31 +1,13 @@
 import axios, { AxiosError, AxiosRequestConfig } from 'axios';
-import { clearAuthTokens, getAuthTokens, isTokenExpired, refreshToken } from './auth';
 import type { ScrapingJob, ScrapingRequest, BatchResults } from '@/types/api';
 
-export const API_BASE_URL = process.env.NEXT_PUBLIC_API_URL || 'http://localhost:8000';
-export const WS_BASE_URL = process.env.NEXT_PUBLIC_WS_URL || 'ws://localhost:8000';
 // Create axios instance with base configuration
 const apiClient = axios.create({
-  baseURL: API_BASE_URL,
+  baseURL: '',
   headers: {
     'Content-Type': 'application/json',
   },
 });
-
-// Flag to prevent multiple refresh token requests
-let isRefreshing = false;
-let refreshSubscribers: ((token: string) => void)[] = [];
-
-// Function to process queue of failed requests
-function onRefreshed(token: string) {
-  refreshSubscribers.forEach(callback => callback(token));
-  refreshSubscribers = [];
-}
-
-// Function to add request to queue
-function addRefreshSubscriber(callback: (token: string) => void) {
-  refreshSubscribers.push(callback);
-}
 
 // Add request interceptor to include auth token in requests
 apiClient.interceptors.request.use(async (config) => {
@@ -34,95 +16,28 @@ apiClient.interceptors.request.use(async (config) => {
   // Skip token handling for auth endpoints
   if (config.url && (
     config.url.includes('/auth/login') ||
-    config.url.includes('/auth/register') ||
-    config.url.includes('/auth/refresh')
+    config.url.includes('/auth/register')
   )) {
     return config;
   }
   
-  // Check for and attach the token
-  const tokens = getAuthTokens();
-  if (tokens) {
-    // Check if token is expired
-    if (isTokenExpired() && !isRefreshing) {
-      isRefreshing = true;
-      
-      try {
-        const newTokens = await refreshToken();
-        isRefreshing = false;
-        
-        if (newTokens) {
-          config.headers.Authorization = `Bearer ${newTokens.access_token}`;
-          onRefreshed(newTokens.access_token);
-          return config;
-        } else {
-          // If refresh failed, clear tokens and redirect to login
-          clearAuthTokens();
-          window.location.href = '/login';
-          return Promise.reject('Authentication failed');
-        }
-      } catch (error) {
-        isRefreshing = false;
-        clearAuthTokens();
-        window.location.href = '/login';
-        return Promise.reject('Authentication failed');
-      }
-    }
-    
-    config.headers.Authorization = `Bearer ${tokens.access_token}`;
+  // Get email from localStorage
+  const email = localStorage.getItem('email');
+  if (email) {
+    config.headers.Authorization = `Bearer ${email}`;
   }
   
   return config;
 });
 
-// Add response interceptor to handle token expiration
+// Add response interceptor to handle unauthorized errors
 apiClient.interceptors.response.use(
   (response) => response,
   async (error: AxiosError) => {
-    const originalRequest = error.config as AxiosRequestConfig & { _retry?: boolean };
-    
-    // Handle 401 errors (unauthorized)
-    if (error.response?.status === 401 && !originalRequest._retry) {
-      if (isRefreshing) {
-        // Wait for token refresh
-        return new Promise<string>((resolve, reject) => {
-          addRefreshSubscriber((token: string) => {
-            if (originalRequest.headers) {
-              originalRequest.headers.Authorization = `Bearer ${token}`;
-            }
-            originalRequest._retry = true;
-            resolve(token);
-          });
-        }).then(() => apiClient(originalRequest));
-      }
-      
-      // Start refresh process
-      originalRequest._retry = true;
-      isRefreshing = true;
-      
-      try {
-        const newTokens = await refreshToken();
-        isRefreshing = false;
-        
-        if (newTokens) {
-          if (originalRequest.headers) {
-            originalRequest.headers.Authorization = `Bearer ${newTokens.access_token}`;
-          }
-          onRefreshed(newTokens.access_token);
-          return apiClient(originalRequest);
-        } else {
-          clearAuthTokens();
-          window.location.href = '/login';
-          return Promise.reject('Authentication failed');
-        }
-      } catch (refreshError) {
-        isRefreshing = false;
-        clearAuthTokens();
-        window.location.href = '/login';
-        return Promise.reject(refreshError);
-      }
+    if (error.response?.status === 401) {
+      localStorage.removeItem('email');
+      window.location.href = '/login';
     }
-    
     return Promise.reject(error);
   }
 );
@@ -173,12 +88,12 @@ export const auth = {
   },
   
   logout: () => {
-    clearAuthTokens();
+    localStorage.removeItem('email');
   },
   
   getUser: async () => {
     try {
-      const response = await apiClient.get('/users/me');
+      const response = await apiClient.get('/api/me');
       return response.data;
     } catch (error) {
       throw error;
@@ -186,31 +101,33 @@ export const auth = {
   },
 
   isAuthenticated: () => {
-    return typeof window !== 'undefined' && getAuthTokens() !== null && !isTokenExpired();
+    return typeof window !== 'undefined' && !!localStorage.getItem('email');
   },
 
-  updateProfile: async (data: { name: string; email: string }) => {
-    const response = await apiClient.patch("/auth/me", data);
+  updateProfile: async (data: { first_name: string; last_name: string }) => {
+    const response = await apiClient.patch("/api/me", data);
     return response.data;
   },
 
   getSubscription: async () => {
-    const response = await apiClient.get("/auth/me/subscription");
-    return response.data;
+    const response = await apiClient.get("/api/me");
+    return response.data?.subscription;
   }
 };
 
 // Subscriptions API
 export const subscriptions = {
   getPackages: async () => {
-    const response = await apiClient.get('/subscriptions/packages');
+    console.log('Calling /api/packages...');
+    const response = await apiClient.get('/api/packages');
+    console.log('Response from /api/packages:', response.data);
     return response.data;
   },
   
   getPackageById: async (id: string) => {
     try {
       // Fetch all packages and find the one matching the requested ID
-      const response = await apiClient.get('/subscriptions/packages');
+      const response = await apiClient.get('/api/packages');
       const packages = response.data;
       const packageData = packages.find((pkg: any) => pkg.id === id);
       
@@ -229,8 +146,8 @@ export const subscriptions = {
   
   getCurrentSubscription: async () => {
     try {
-      const response = await apiClient.get('/subscriptions/subscription');
-      return response.data;
+      const response = await apiClient.get('/api/me');
+      return response.data?.subscription;
     } catch (error: any) {
       // Return null when 404 (no active subscription) is encountered
       if (error.response?.status === 404) {
@@ -242,8 +159,8 @@ export const subscriptions = {
   
   subscribe: async (packageId: string) => {
     try {
-      const response = await apiClient.post('/subscriptions/subscribe', {
-        package_id: packageId
+      const response = await apiClient.post('/api/subscriptions', {
+        packageId
       });
       return response.data;
     } catch (error: any) {
@@ -256,7 +173,7 @@ export const subscriptions = {
   
   cancelSubscription: async () => {
     try {
-      const response = await apiClient.post('/subscriptions/cancel');
+      const response = await apiClient.delete('/api/subscriptions');
       return response.data;
     } catch (error: any) {
       if (error.response?.status === 404) {

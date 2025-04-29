@@ -24,12 +24,17 @@ export function PricingSection() {
   useEffect(() => {
     const fetchData = async () => {
       try {
+        console.log('Fetching packages...');
         const packagesData = await subscriptions.getPackages();
-        setPackages(packagesData.filter((pkg: SubscriptionPackage) => pkg.is_active));
+        console.log('Raw packages data:', packagesData);
+        const filteredPackages = packagesData.filter((pkg: SubscriptionPackage) => pkg.isActive);
+        console.log('Filtered packages:', filteredPackages);
+        setPackages(filteredPackages);
         
         // Only fetch subscription if authenticated
         if (isAuthenticated) {
           const subscription = await subscriptions.getCurrentSubscription();
+          console.log('Current subscription:', subscription);
           setCurrentSubscription(subscription);
         }
       } catch (err) {
@@ -45,12 +50,12 @@ export function PricingSection() {
 
   // Features to display for each package
   const packageFeatures = [
-    { key: "max_monthly_scrapes", label: "monthlyScrapes" },
-    { key: "max_urls_per_batch", label: "urlsPerBatch" },
-    { key: "max_pages_per_site", label: "pagesPerSite" },
-    { key: "concurrent_sites", label: "concurrentSites" },
-    { key: "max_monthly_emails", label: "monthlyEmails" },
-    { key: "max_emails_per_site", label: "emailsPerSite" }
+    { key: "maxMonthlyScrapes", label: "monthlyScrapes" },
+    { key: "maxUrlsPerBatch", label: "urlsPerBatch" },
+    { key: "maxPagesPerSite", label: "pagesPerSite" },
+    { key: "concurrentSites", label: "concurrentSites" },
+    { key: "maxMonthlyEmails", label: "monthlyEmails" },
+    { key: "maxEmailsPerSite", label: "emailsPerSite" }
   ];
 
   return (
@@ -86,6 +91,7 @@ export function PricingSection() {
         {!isLoading && !error && (
           <div className="grid grid-cols-1 md:grid-cols-3 gap-8 max-w-5xl mx-auto">
             {packages.map((pkg) => {
+              console.log('Rendering package:', pkg);
               const isCurrentPlan = currentSubscription?.package?.id === pkg.id;
               const isComingSoon = pkg.name === "Professional" || pkg.name === "Enterprise";
               return (
