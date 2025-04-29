@@ -1,5 +1,5 @@
 export interface LoginRequest {
-  username: string;
+  email: string;
   password: string;
 }
 
@@ -11,10 +11,15 @@ export interface RegisterRequest {
 }
 
 export interface AuthResponse {
-  access_token: string;
-  refresh_token: string;
-  token_type: string;
-  expires_in?: number;
+  user: {
+    id: string;
+    username: string;
+    email: string;
+    first_name: string | null;
+    last_name: string | null;
+    is_active: boolean;
+  };
+  message: string;
 }
 
 export interface RefreshTokenResponse {
