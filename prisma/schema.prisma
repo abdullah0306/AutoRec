@@ -32,14 +32,14 @@ model Package {
   name               String        @unique
   description        String
   price             Float
-  maxMonthlyScrapes Int           @map("max_monthly_scrapes")
-  maxUrlsPerBatch   Int           @map("max_urls_per_batch")
-  maxPagesPerSite   Int           @map("max_pages_per_site")
-  concurrentSites   Int           @map("concurrent_sites")
-  maxMonthlyEmails  Int           @default(1000) @map("max_monthly_emails")
-  maxEmailsPerSite  Int           @default(50) @map("max_emails_per_site")
-  isActive         Boolean        @default(true) @map("is_active")
-  createdAt        DateTime       @default(now()) @map("created_at")
+  maxMonthlyScrapes Int
+  maxUrlsPerBatch   Int
+  maxPagesPerSite   Int
+  concurrentSites   Int
+  maxMonthlyEmails  Int           @default(1000)
+  maxEmailsPerSite  Int           @default(50)
+  isActive         Boolean        @default(true)
+  createdAt        DateTime       @default(now())
   subscriptions    Subscription[]
 
   @@map("packages")

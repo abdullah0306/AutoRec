@@ -1,5 +1,6 @@
 import { NextResponse } from "next/server";
 import { prisma } from "@/lib/prisma";
+import { Prisma } from "@prisma/client";
 
 export async function GET() {
   try {
@@ -26,9 +27,28 @@ export async function GET() {
     console.log('Found packages:', packages);
     return NextResponse.json(packages);
   } catch (error) {
-    console.error("[GET_PACKAGES_ERROR]", error);
+    if (error instanceof Prisma.PrismaClientKnownRequestError) {
+      console.error('[GET_PACKAGES_ERROR] Details:', {
+        name: error.name,
+        message: error.message,
+        code: error.code,
+        meta: error.meta
+      });
+      return NextResponse.json(
+        { 
+          error: "Database query failed",
+          details: {
+            code: error.code,
+            message: error.message
+          }
+        },
+        { status: 500 }
+      );
+    }
+    // Handle other types of errors
+    console.error('[GET_PACKAGES_ERROR] Unknown error:', error);
     return NextResponse.json(
-      { error: "Something went wrong" },
+      { error: "An unexpected error occurred" },
       { status: 500 }
     );
   }
