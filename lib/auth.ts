@@ -41,17 +41,23 @@ export async function login(credentials: LoginRequest): Promise<AuthResponse> {
 }
 
 export async function register(data: RegisterRequest): Promise<void> {
-  const response = await fetch(`${API_BASE_URL}/auth/register`, {
+  const response = await fetch('/api/auth/register', {
     method: "POST",
     headers: {
       "Content-Type": "application/json",
     },
-    body: JSON.stringify(data),
+    body: JSON.stringify({
+      username: data.email, // Using email as username
+      email: data.email,
+      password: data.password,
+      first_name: data.firstName,
+      last_name: data.lastName
+    }),
   });
 
   if (!response.ok) {
     const error = await response.json();
-    throw new Error(error.detail || "Registration failed");
+    throw new Error(error.error || "Registration failed");
   }
 }
 
@@ -117,6 +123,18 @@ export async function refreshToken(): Promise<AuthResponse | null> {
     clearAuthTokens();
     return null;
   }
+}
+
+export function getToken(): string | null {
+  return typeof window !== "undefined" ? localStorage.getItem("token") : null;
+}
+
+export function getJwtSecretKey(): string {
+  const secret = process.env.NEXTAUTH_SECRET;
+  if (!secret) {
+    throw new Error('NEXTAUTH_SECRET is not set');
+  }
+  return secret;
 }
 
 export async function forgotPassword(email: string): Promise<void> {

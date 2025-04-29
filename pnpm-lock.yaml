@@ -101,9 +101,6 @@ importers:
       '@stripe/stripe-js':
         specifier: ^7.2.0
         version: 7.2.0
-      '@types/bcryptjs':
-        specifier: ^3.0.0
-        version: 3.0.0
       '@types/uuid':
         specifier: ^10.0.0
         version: 10.0.0
@@ -198,6 +195,9 @@ importers:
         specifier: ^5.0.3
         version: 5.0.3(@types/react@18.3.18)(react@18.3.1)(use-sync-external-store@1.4.0(react@18.3.1))
     devDependencies:
+      '@types/bcryptjs':
+        specifier: ^3.0.0
+        version: 3.0.0
       '@types/node':
         specifier: ^22
         version: 22.13.4

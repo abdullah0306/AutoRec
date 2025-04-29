@@ -6,7 +6,8 @@ export interface LoginRequest {
 export interface RegisterRequest {
   email: string;
   password: string;
-  full_name?: string;
+  firstName: string;
+  lastName: string;
 }
 
 export interface AuthResponse {
@@ -29,13 +30,14 @@ export interface ApiError {
 }
 
 export interface RegisterResponse {
-  id: string;
-  email: string;
-  username: string;
-  first_name: string;
-  last_name: string;
-  is_active: boolean;
-  created_at: string;
+  user: {
+    id: string;
+    email: string;
+    username: string;
+    first_name: string;
+    last_name: string;
+  };
+  message: string;
 }
 
 export interface LoginResponse {
