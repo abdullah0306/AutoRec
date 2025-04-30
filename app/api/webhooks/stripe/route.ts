@@ -8,28 +8,47 @@ const stripe = new Stripe(process.env.STRIPE_SECRET_KEY!, {
 });
 
 async function handleSubscriptionCreated(subscription: Stripe.Subscription) {
+  console.log('[WEBHOOK] Processing subscription:', subscription.id);
+  console.log('[WEBHOOK] Metadata:', subscription.metadata);
+
   const { userId, packageId } = subscription.metadata;
 
-  // Create or update subscription in our database
-  await prisma.subscription.upsert({
-    where: {
-      userId: userId,
-    },
-    create: {
-      userId: userId,
-      packageId: packageId,
-      startDate: new Date(),
-      isActive: true,
-    },
-    update: {
-      packageId: packageId,
-      startDate: new Date(),
-      isActive: true,
-    },
-  });
+  if (!userId || !packageId) {
+    console.error('[WEBHOOK] Missing userId or packageId in metadata');
+    throw new Error('Missing required metadata');
+  }
+
+  console.log('[WEBHOOK] Creating/updating subscription for user:', userId);
+
+  try {
+    // Create or update subscription in our database
+    const result = await prisma.subscription.upsert({
+      where: {
+        userId: userId,
+      },
+      create: {
+        userId: userId,
+        packageId: packageId,
+        startDate: new Date(),
+        isActive: true,
+      },
+      update: {
+        packageId: packageId,
+        startDate: new Date(),
+        isActive: true,
+      },
+    });
+
+    console.log('[WEBHOOK] Subscription saved:', result);
+    return result;
+  } catch (error) {
+    console.error('[WEBHOOK] Failed to save subscription:', error);
+    throw error;
+  }
 }
 
 export async function POST(request: Request) {
+  console.log('[WEBHOOK] Received webhook request');
   const body = await request.text();
   const signature = headers().get("stripe-signature")!;
 
@@ -41,6 +60,7 @@ export async function POST(request: Request) {
       signature,
       process.env.STRIPE_WEBHOOK_SECRET!
     );
+    console.log('[WEBHOOK] Event type:', event.type);
   } catch (err) {
     console.error("[STRIPE_WEBHOOK_ERROR]", err);
     return NextResponse.json(
@@ -51,15 +71,27 @@ export async function POST(request: Request) {
 
   try {
     switch (event.type) {
+      case "checkout.session.completed":
+        const session = event.data.object as Stripe.Checkout.Session;
+        console.log('[WEBHOOK] Checkout completed:', session.id);
+        if (session.subscription) {
+          const subscription = await stripe.subscriptions.retrieve(session.subscription as string);
+          await handleSubscriptionCreated(subscription);
+        }
+        break;
+
       case "customer.subscription.created":
-        await handleSubscriptionCreated(event.data.object as Stripe.Subscription);
-        break;
       case "customer.subscription.updated":
+        console.log('[WEBHOOK] Subscription event:', event.type);
         await handleSubscriptionCreated(event.data.object as Stripe.Subscription);
         break;
+
       case "customer.subscription.deleted":
         // Handle subscription cancellation if needed
         break;
+
+      default:
+        console.log(`[WEBHOOK] Unhandled event type: ${event.type}`);
     }
 
     return NextResponse.json({ received: true });

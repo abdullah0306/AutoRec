@@ -17,7 +17,7 @@ interface Params {
 }
 
 export default function SubscribePage() {
-  const params = useParams() as Params;
+  const params = useParams() as unknown as Params;
   const router = useRouter();
   const { user, isAuthLoading, isAuthenticated } = useAuth();
   const { toast } = useToast();
@@ -35,7 +35,7 @@ export default function SubscribePage() {
     if (!isAuthLoading) {
       if (!isAuthenticated) {
         // Redirect to login page if not authenticated
-        router.push(`/login?redirect=/subscribe/${planId}`);
+        router.push(`/login?redirect=/subscribe/${params.planId}`);
         return;
       }
 
@@ -82,12 +82,26 @@ export default function SubscribePage() {
   }, [isAuthLoading, isAuthenticated, params.planId, router]);
 
   const handleSubscribe = async () => {
-    if (!packageData) return;
+    if (!packageData || !user) return;
     
     setIsSubscribing(true);
     setSubscribeError(null);
     
     try {
+      // Create subscription in database first
+      await fetch('/api/subscriptions', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+          'Authorization': `Bearer ${user.email}`,
+        },
+        body: JSON.stringify({
+          packageId: packageData.id,
+          userId: user.id,
+        }),
+      });
+
+      // Then get Stripe checkout URL
       const response = await subscriptions.subscribe(packageData.id);
       console.log('Stripe response:', response);
 
@@ -97,8 +111,6 @@ export default function SubscribePage() {
 
       if (response.url) {
         console.log('Redirecting to Stripe:', response.url);
-        // Add a small delay to ensure console logs are visible
-        await new Promise(resolve => setTimeout(resolve, 100));
         window.location.href = response.url;
         return;
       }
@@ -196,27 +208,27 @@ export default function SubscribePage() {
               <div className="space-y-2">
                 <div className="flex items-center">
                   <Check className="h-5 w-5 text-primary mr-2 flex-shrink-0" />
-                  <span>{packageData.max_monthly_scrapes} monthly scrapes</span>
+                  <span>{packageData.maxMonthlyScrapes} monthly scrapes</span>
                 </div>
                 <div className="flex items-center">
                   <Check className="h-5 w-5 text-primary mr-2 flex-shrink-0" />
-                  <span>Up to {packageData.max_urls_per_batch} URLs per batch</span>
+                  <span>Up to {packageData.maxUrlsPerBatch} URLs per batch</span>
                 </div>
                 <div className="flex items-center">
                   <Check className="h-5 w-5 text-primary mr-2 flex-shrink-0" />
-                  <span>Up to {packageData.max_pages_per_site} pages per site</span>
+                  <span>Up to {packageData.maxPagesPerSite} pages per site</span>
                 </div>
                 <div className="flex items-center">
                   <Check className="h-5 w-5 text-primary mr-2 flex-shrink-0" />
-                  <span>{packageData.concurrent_sites} concurrent sites</span>
+                  <span>{packageData.concurrentSites} concurrent sites</span>
                 </div>
                 <div className="flex items-center">
                   <Check className="h-5 w-5 text-primary mr-2 flex-shrink-0" />
-                  <span>Up to {packageData.max_monthly_emails} monthly emails</span>
+                  <span>Up to {packageData.maxMonthlyEmails} monthly emails</span>
                 </div>
                 <div className="flex items-center">
                   <Check className="h-5 w-5 text-primary mr-2 flex-shrink-0" />
-                  <span>Up to {packageData.max_emails_per_site} emails per site</span>
+                  <span>Up to {packageData.maxEmailsPerSite} emails per site</span>
                 </div>
               </div>
             </CardContent>

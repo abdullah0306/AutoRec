@@ -31,7 +31,7 @@ export async function POST(req: Request) {
       return NextResponse.json({ error: "Package not found" }, { status: 404 });
     }
 
-    // Create or update subscription
+    // Create or update subscription with package limits
     const subscription = await prisma.subscription.upsert({
       where: { userId: user.id },
       create: {
@@ -39,14 +39,19 @@ export async function POST(req: Request) {
         packageId: package_.id,
         startDate: new Date(),
         isActive: true,
-        monthlyUsage: 0,
-        monthlyEmailUsage: 0,
+        monthlyUsage: package_.maxMonthlyScrapes,
+        monthlyEmailUsage: package_.maxMonthlyEmails,
+        monthlyCandidateUsage: package_.maxCandidateProfiles,
         lastUsageReset: new Date()
       },
       update: {
         packageId: package_.id,
         startDate: new Date(),
-        isActive: true
+        isActive: true,
+        monthlyUsage: package_.maxMonthlyScrapes,
+        monthlyEmailUsage: package_.maxMonthlyEmails,
+        monthlyCandidateUsage: package_.maxCandidateProfiles,
+        lastUsageReset: new Date()
       }
     });
 

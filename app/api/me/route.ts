@@ -33,6 +33,7 @@ export async function GET(req: Request) {
             endDate: true,
             monthlyUsage: true,
             monthlyEmailUsage: true,
+            monthlyCandidateUsage: true,
             lastUsageReset: true,
             package: {
               select: {
@@ -45,7 +46,9 @@ export async function GET(req: Request) {
                 maxPagesPerSite: true,
                 concurrentSites: true,
                 maxMonthlyEmails: true,
-                maxEmailsPerSite: true
+                maxEmailsPerSite: true,
+                maxCandidateProfiles: true,
+                maxProfilesPerBatch: true
               }
             }
           }

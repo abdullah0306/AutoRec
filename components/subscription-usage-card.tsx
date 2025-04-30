@@ -95,8 +95,27 @@ export function SubscriptionUsageCard() {
     );
   }
 
-  const scraperUsagePercent = (subscription.monthly_usage / subscription.max_monthly_scrapes) * 100;
-  const emailUsagePercent = (subscription.monthly_email_usage / subscription.package.max_monthly_emails) * 100;
+  // monthlyUsage represents remaining usage, so we need to invert the percentage
+  if (!subscription.package) {
+    return (
+      <Card>
+        <CardHeader>
+          <CardTitle>Subscription Error</CardTitle>
+          <CardDescription>Unable to load subscription details</CardDescription>
+        </CardHeader>
+        <CardContent>
+          <Alert variant="destructive">
+            <AlertCircle className="h-4 w-4" />
+            <AlertDescription>Package information is missing</AlertDescription>
+          </Alert>
+        </CardContent>
+      </Card>
+    );
+  }
+
+  const scraperUsagePercent = 100 - (subscription.monthlyUsage / subscription.package.maxMonthlyScrapes) * 100;
+  const emailUsagePercent = 100 - (subscription.monthlyEmailUsage / subscription.package.maxMonthlyEmails) * 100;
+  const candidateUsagePercent = 100 - (subscription.monthlyCandidateUsage / subscription.package.maxCandidateProfiles) * 100;
 
   return (
     <Card>
@@ -120,22 +139,33 @@ export function SubscriptionUsageCard() {
         <div className="space-y-2">
           <div className="flex items-center justify-between">
             <span className="text-sm font-medium">Scraping Usage</span>
-            <span className="text-xs font-medium">{subscription.monthly_usage}/{subscription.max_monthly_scrapes}</span>
+            <span className="text-xs font-medium">{subscription.package.maxMonthlyScrapes - subscription.monthlyUsage}/{subscription.package.maxMonthlyScrapes}</span>
           </div>
           <Progress value={scraperUsagePercent} className="h-2" />
           <p className="text-xs text-muted-foreground text-right">
-            {subscription.remaining_scrapes} remaining this month
+            {subscription.monthlyUsage} remaining this month
           </p>
         </div>
         
         <div className="space-y-2">
           <div className="flex items-center justify-between">
             <span className="text-sm font-medium">Email Collection</span>
-            <span className="text-xs font-medium">{subscription.monthly_email_usage}/{subscription.package.max_monthly_emails}</span>
+            <span className="text-xs font-medium">{subscription.package.maxMonthlyEmails - subscription.monthlyEmailUsage}/{subscription.package.maxMonthlyEmails}</span>
           </div>
           <Progress value={emailUsagePercent} className="h-2" />
           <p className="text-xs text-muted-foreground text-right">
-            {subscription.remaining_emails} remaining this month
+            {subscription.monthlyEmailUsage} remaining this month
+          </p>
+        </div>
+
+        <div className="space-y-2">
+          <div className="flex items-center justify-between">
+            <span className="text-sm font-medium">Candidate Profiles</span>
+            <span className="text-xs font-medium">{subscription.package.maxCandidateProfiles - subscription.monthlyCandidateUsage}/{subscription.package.maxCandidateProfiles}</span>
+          </div>
+          <Progress value={candidateUsagePercent} className="h-2" />
+          <p className="text-xs text-muted-foreground text-right">
+            {subscription.monthlyCandidateUsage} remaining this month
           </p>
         </div>
       </CardContent>
