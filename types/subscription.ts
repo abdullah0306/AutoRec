@@ -10,6 +10,10 @@ export interface SubscriptionPackage {
   isActive: boolean;
   maxMonthlyEmails: number;
   maxEmailsPerSite: number;
+  maxCandidateProfiles: number;
+  maxProfilesPerBatch: number;
+  stripeProductId?: string;
+  stripePriceId?: string;
 }
 
 export interface Subscription {
@@ -22,5 +26,6 @@ export interface Subscription {
   isActive: boolean;
   monthlyUsage: number;
   monthlyEmailUsage: number;
+  monthlyCandidateUsage: number;
   lastUsageReset: string;
 }

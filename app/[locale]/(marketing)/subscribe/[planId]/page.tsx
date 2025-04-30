@@ -12,8 +12,12 @@ import { useToast } from "@/components/ui/use-toast";
 import { useAuth } from "@/contexts/auth-context";
 import Link from "next/link";
 
+interface Params {
+  planId: string;
+}
+
 export default function SubscribePage() {
-  const { planId } = useParams();
+  const params = useParams() as Params;
   const router = useRouter();
   const { user, isAuthLoading, isAuthenticated } = useAuth();
   const { toast } = useToast();
@@ -45,7 +49,7 @@ export default function SubscribePage() {
           const allPackages = await subscriptions.getPackages();
           
           // Find the package with matching ID
-          const selectedPackage = allPackages.find((pkg: any) => pkg.id === planId);
+          const selectedPackage = allPackages.find((pkg: any) => pkg.id === params.planId);
           
           if (!selectedPackage) {
             setIsPackageNotFound(true);
@@ -75,7 +79,7 @@ export default function SubscribePage() {
 
       fetchData();
     }
-  }, [isAuthLoading, isAuthenticated, planId, router]);
+  }, [isAuthLoading, isAuthenticated, params.planId, router]);
 
   const handleSubscribe = async () => {
     if (!packageData) return;
@@ -84,23 +88,29 @@ export default function SubscribePage() {
     setSubscribeError(null);
     
     try {
-      await subscriptions.subscribe(packageData.id);
-      toast({
-        title: "Subscription successful!",
-        description: `You have successfully subscribed to the ${packageData.name} plan.`,
-        variant: "success",
-      });
-      
-      // Redirect to dashboard after successful subscription
-      setTimeout(() => {
-        router.push("/dashboard");
-      }, 1500);
-    } catch (err: any) {
-      console.error("Subscription failed:", err);
-      setSubscribeError(err.message || "Failed to process subscription");
+      const response = await subscriptions.subscribe(packageData.id);
+      console.log('Stripe response:', response);
+
+      if (response.error) {
+        throw new Error(response.error);
+      }
+
+      if (response.url) {
+        console.log('Redirecting to Stripe:', response.url);
+        // Add a small delay to ensure console logs are visible
+        await new Promise(resolve => setTimeout(resolve, 100));
+        window.location.href = response.url;
+        return;
+      }
+
+      throw new Error('No checkout URL received');
+    } catch (err) {
+      const error = err as Error;
+      console.error("Subscription failed:", error);
+      setSubscribeError(error.message || "Failed to process subscription");
       toast({
         title: "Subscription failed",
-        description: err.message || "There was an error processing your subscription.",
+        description: error.message || "There was an error processing your subscription.",
         variant: "error",
       });
     } finally {

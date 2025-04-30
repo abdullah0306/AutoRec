@@ -50,6 +50,8 @@ export function PricingSection() {
 
   // Features to display for each package
   const packageFeatures = [
+    { key: "maxCandidateProfiles", label: "candidateProfiles" },
+    { key: "maxProfilesPerBatch", label: "profilesPerBatch" },
     { key: "maxMonthlyScrapes", label: "monthlyScrapes" },
     { key: "maxUrlsPerBatch", label: "urlsPerBatch" },
     { key: "maxPagesPerSite", label: "pagesPerSite" },
@@ -90,10 +92,12 @@ export function PricingSection() {
 
         {!isLoading && !error && (
           <div className="grid grid-cols-1 md:grid-cols-3 gap-8 max-w-5xl mx-auto">
-            {packages.map((pkg) => {
+            {[...packages].sort((a, b) => {
+              const order: Record<string, number> = { 'Basic': 1, 'Professional': 2, 'Enterprise': 3 };
+              return (order[a.name] ?? 99) - (order[b.name] ?? 99);
+            }).map((pkg) => {
               console.log('Rendering package:', pkg);
               const isCurrentPlan = currentSubscription?.package?.id === pkg.id;
-              const isComingSoon = pkg.name === "Professional" || pkg.name === "Enterprise";
               return (
                 <Card 
                   key={pkg.id} 
@@ -115,9 +119,9 @@ export function PricingSection() {
                     <CardDescription>{pkg.description}</CardDescription>
                     <div className="mt-4">
                       <span className="text-3xl font-bold">
-                        {isComingSoon ? t("comingSoon") : `$${pkg.price.toFixed(2)}`}
+                        ${pkg.price.toFixed(2)}
                       </span>
-                      {!isComingSoon && <span className="text-muted-foreground ml-1">{t("month")}</span>}
+                      <span className="text-muted-foreground ml-1">{t("month")}</span>
                     </div>
                   </CardHeader>
                   <CardContent className="flex-grow">

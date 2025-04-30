@@ -36,7 +36,6 @@ apiClient.interceptors.response.use(
   async (error: AxiosError) => {
     if (error.response?.status === 401) {
       localStorage.removeItem('email');
-      window.location.href = '/login';
     }
     return Promise.reject(error);
   }
@@ -159,18 +158,27 @@ export const subscriptions = {
   
   subscribe: async (packageId: string) => {
     try {
-      const response = await apiClient.post('/api/subscriptions', {
+      const email = localStorage.getItem('email');
+      if (!email) {
+        return { error: 'Not authenticated' };
+      }
+
+      const response = await apiClient.post('/api/create-checkout-session', {
         packageId
+      }, {
+        headers: {
+          'Authorization': `Bearer ${email}`
+        }
       });
       return response.data;
     } catch (error: any) {
       if (error.response?.status === 404) {
-        throw new Error("Package not found or inactive");
+        return { error: "Package not found or inactive" };
       }
-      throw error;
+      return { error: error.message || "An unexpected error occurred" };
     }
   },
-  
+
   cancelSubscription: async () => {
     try {
       const response = await apiClient.delete('/api/subscriptions');

@@ -54,6 +54,18 @@
     "checkEmailTitle": "Check your email",
     "checkEmailDescription": "If an account exists, we've sent you instructions to reset your password."
   },
+  "Subscribe": {
+    "features": {
+      "candidateProfiles": "candidate profiles per month",
+      "profilesPerBatch": "profiles per batch",
+      "monthlyScrapes": "monthly scrapes",
+      "urlsPerBatch": "URLs per batch",
+      "pagesPerSite": "pages per site",
+      "concurrentSites": "concurrent sites",
+      "monthlyEmails": "monthly emails",
+      "emailsPerSite": "emails per site"
+    }
+  },
   "Marketing": {
     "hero": {
       "newFeature": "New Feature",
@@ -124,6 +136,8 @@
       "comingSoon": "Coming Soon",
       "month": "/month",
       "features": {
+        "candidateProfiles": "candidate profiles per month",
+        "profilesPerBatch": "profiles per batch",
         "monthlyScrapes": "monthly scrapes",
         "urlsPerBatch": "URLs per batch",
         "pagesPerSite": "pages per site",
