@@ -113,8 +113,7 @@ export function SubscriptionUsageCard() {
     );
   }
 
-  const scraperUsagePercent = 100 - (subscription.monthlyUsage / subscription.package.maxMonthlyScrapes) * 100;
-  const emailUsagePercent = 100 - (subscription.monthlyEmailUsage / subscription.package.maxMonthlyEmails) * 100;
+  const websitesUsagePercent = 100 - (subscription.monthlyUsage / subscription.package.maxMonthlyScrapes) * 100;
   const candidateUsagePercent = 100 - (subscription.monthlyCandidateUsage / subscription.package.maxCandidateProfiles) * 100;
 
   return (
@@ -138,10 +137,10 @@ export function SubscriptionUsageCard() {
       <CardContent className="space-y-4 pt-2">
         <div className="space-y-2">
           <div className="flex items-center justify-between">
-            <span className="text-sm font-medium">Scraping Usage</span>
+            <span className="text-sm font-medium">Websites Scraping</span>
             <span className="text-xs font-medium">{subscription.package.maxMonthlyScrapes - subscription.monthlyUsage}/{subscription.package.maxMonthlyScrapes}</span>
           </div>
-          <Progress value={scraperUsagePercent} className="h-2" />
+          <Progress value={websitesUsagePercent} className="h-2" />
           <p className="text-xs text-muted-foreground text-right">
             {subscription.monthlyUsage} remaining this month
           </p>
@@ -149,18 +148,7 @@ export function SubscriptionUsageCard() {
         
         <div className="space-y-2">
           <div className="flex items-center justify-between">
-            <span className="text-sm font-medium">Email Collection</span>
-            <span className="text-xs font-medium">{subscription.package.maxMonthlyEmails - subscription.monthlyEmailUsage}/{subscription.package.maxMonthlyEmails}</span>
-          </div>
-          <Progress value={emailUsagePercent} className="h-2" />
-          <p className="text-xs text-muted-foreground text-right">
-            {subscription.monthlyEmailUsage} remaining this month
-          </p>
-        </div>
-
-        <div className="space-y-2">
-          <div className="flex items-center justify-between">
-            <span className="text-sm font-medium">Candidate Profiles</span>
+            <span className="text-sm font-medium">Candidate Profile Scraping</span>
             <span className="text-xs font-medium">{subscription.package.maxCandidateProfiles - subscription.monthlyCandidateUsage}/{subscription.package.maxCandidateProfiles}</span>
           </div>
           <Progress value={candidateUsagePercent} className="h-2" />
