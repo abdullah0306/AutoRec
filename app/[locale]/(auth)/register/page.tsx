@@ -27,8 +27,8 @@ export default function RegisterPage() {
   const registerSchema = z.object({
     email: z.string().email(common("invalidEmail")),
     password: z.string().min(6, common("passwordMinLength")),
-    first_name: z.string().min(2, t("firstNameRequired")),
-    last_name: z.string().min(2, t("lastNameRequired")),
+    firstName: z.string().min(2, t("firstNameRequired")),
+    lastName: z.string().min(2, t("lastNameRequired")),
   });
 
   const form = useForm<z.infer<typeof registerSchema>>({
@@ -36,8 +36,8 @@ export default function RegisterPage() {
     defaultValues: {
       email: "",
       password: "",
-      first_name: "",
-      last_name: "",
+      firstName: "",
+      lastName: "",
     },
     mode: "onChange",
   });
@@ -108,11 +108,11 @@ export default function RegisterPage() {
                 id="first_name"
                 placeholder={t("firstNamePlaceholder")}
                 disabled={isLoading}
-                {...form.register("first_name")}
+                {...form.register("firstName")}
               />
-              {form.formState.errors.first_name && (
+              {form.formState.errors.firstName && (
                 <p className="text-sm text-destructive">
-                  {form.formState.errors.first_name.message}
+                  {form.formState.errors.firstName.message}
                 </p>
               )}
             </div>
@@ -122,11 +122,11 @@ export default function RegisterPage() {
                 id="last_name"
                 placeholder={t("lastNamePlaceholder")}
                 disabled={isLoading}
-                {...form.register("last_name")}
+                {...form.register("lastName")}
               />
-              {form.formState.errors.last_name && (
+              {form.formState.errors.lastName && (
                 <p className="text-sm text-destructive">
-                  {form.formState.errors.last_name.message}
+                  {form.formState.errors.lastName.message}
                 </p>
               )}
             </div>

@@ -11,14 +11,11 @@ import {
 import { 
   login as loginApi, 
   register as registerApi, 
-  setAuthTokens, 
   clearAuthTokens,
-  getAuthTokens,
   isAuthenticated as checkIsAuthenticated,
-  refreshToken,
-  forgotPassword as forgotPasswordApi 
+  forgotPassword as forgotPasswordApi,
+  auth
 } from "@/lib/auth";
-import apiClient, { auth } from "@/lib/api";
 
 interface AuthContextType {
   user: User | null;
@@ -49,40 +46,10 @@ export const AuthProvider = ({ children }: { children: React.ReactNode }) => {
           setUser(userData);
           setIsAuthenticated(true);
         } catch (error) {
-          // If token is invalid, try refreshing
-          try {
-            const newTokens = await refreshToken();
-            if (newTokens) {
-              // Try getting user data again with new token
-              const userData = await auth.getUser();
-              setUser(userData);
-              setIsAuthenticated(true);
-            } else {
-              handleLogout();
-            }
-          } catch (refreshError) {
-            handleLogout();
-          }
-        }
-      } else {
-        // Check if we have refresh token to try
-        const tokens = getAuthTokens();
-        if (tokens?.refresh_token) {
-          try {
-            const newTokens = await refreshToken();
-            if (newTokens) {
-              const userData = await auth.getUser();
-              setUser(userData);
-              setIsAuthenticated(true);
-            } else {
-              handleLogout();
-            }
-          } catch (error) {
-            handleLogout();
-          }
-        } else {
           handleLogout();
         }
+      } else {
+        handleLogout();
       }
       
       setIsAuthLoading(false);
@@ -95,11 +62,10 @@ export const AuthProvider = ({ children }: { children: React.ReactNode }) => {
     setIsAuthLoading(true);
     try {
       const response = await loginApi(data);
-      setAuthTokens(response);
       const userData = await auth.getUser();
       setUser(userData);
       setIsAuthenticated(true);
-      return;
+      router.push('/dashboard');
     } catch (error) {
       throw error;
     } finally {

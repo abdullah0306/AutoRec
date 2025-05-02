@@ -26,14 +26,14 @@ export default function LoginPage() {
   const { login, isAuthLoading } = useAuth();
 
   const loginSchema = z.object({
-    username: z.string().email(common("invalidEmail")),
+    email: z.string().email(common("invalidEmail")),
     password: z.string().min(6, common("passwordMinLength")),
   });
 
   const form = useForm<z.infer<typeof loginSchema>>({
     resolver: zodResolver(loginSchema),
     defaultValues: {
-      username: "",
+      email: "",
       password: "",
     },
     mode: "onChange",
@@ -111,17 +111,17 @@ export default function LoginPage() {
       <form onSubmit={form.handleSubmit(onSubmit)} className="space-y-4">
         <div className="space-y-4">
           <div className="space-y-2">
-            <Label htmlFor="username">{common("email")}</Label>
+            <Label htmlFor="email">{common("email")}</Label>
             <Input
-              id="username"
+              id="email"
               type="email"
               placeholder={common("emailPlaceholder")}
               disabled={isAuthLoading}
-              {...form.register("username")}
+              {...form.register("email")}
             />
-            {form.formState.errors.username && (
+            {form.formState.errors.email && (
               <p className="text-sm text-destructive">
-                {form.formState.errors.username.message}
+                {form.formState.errors.email.message}
               </p>
             )}
           </div>

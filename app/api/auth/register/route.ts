@@ -5,7 +5,13 @@ import { v4 as uuidv4 } from "uuid";
 
 export async function POST(req: Request) {
   try {
-    const { username, email, password, firstName, lastName } = await req.json();
+    const data = await req.json();
+    const username = data.email; // Using email as username
+    const email = data.email;
+    const password = data.password;
+    // Handle both camelCase and snake_case field names
+    const first_name = data.first_name || data.firstName;
+    const last_name = data.last_name || data.lastName;
 
     // Check if username or email already exists
     const existingUser = await prisma.user.findFirst({
@@ -41,11 +47,11 @@ export async function POST(req: Request) {
       data: {
         username,
         email,
-        hashedPassword,
-        firstName,
-        lastName,
-        emailVerificationToken,
-        emailVerificationExpiry,
+        hashed_password: hashedPassword,
+        first_name,
+        last_name,
+        email_verification_token: emailVerificationToken,
+        email_verification_expiry: emailVerificationExpiry,
       },
     });
 
@@ -56,6 +62,8 @@ export async function POST(req: Request) {
         id: user.id,
         username: user.username,
         email: user.email,
+        first_name: user.first_name,
+        last_name: user.last_name
       },
       message: "Registration successful. Please check your email to verify your account.",
     });

@@ -58,31 +58,45 @@ export default function AISourcePage() {
   // Candidate recommendations - initialized as empty, will be populated from local storage
   const [candidateRecommendations, setCandidateRecommendations] = useState<Candidate[]>([]);
 
-  // Load accepted candidates from local storage
+  // Load selected candidates from database
   useEffect(() => {
-    if (typeof window !== 'undefined') {
-      const savedCandidates = JSON.parse(localStorage.getItem('acceptedCandidates') || '[]');
+    const fetchSelectedCandidates = async () => {
+      try {
+        const email = localStorage.getItem('email');
+        if (!email) {
+          console.error('User not logged in');
+          return;
+        }
 
-      if (savedCandidates.length > 0) {
-        // Convert LinkedIn candidates to the format used in the UI
-        const formattedCandidates = savedCandidates.map((candidate: { [x: string]: any; Name: string; Experience: { title: any; }[]; Headline: any; matchPercentage: any; }, index: number) => ({
-          id: 100 + index, // Start IDs from 100 to avoid conflicts
-          name: candidate.Name,
-          title: candidate.Experience?.[0]?.title || candidate.Headline || 'Professional',
-          match: candidate.matchPercentage || '85%',
-          avatar: candidate.Name.split(' ').map(n => n[0]).join(''),
-          linkedInUrl: candidate["LinkedIn Profile Link"]
+        const response = await fetch('/api/candidates/selected', {
+          headers: {
+            'Authorization': `Bearer ${email}`
+          }
+        });
+        if (!response.ok) {
+          throw new Error('Failed to fetch candidates');
+        }
+
+        const data = await response.json();
+        
+        // Convert database candidates to the format used in the UI
+        const formattedCandidates = data.map((candidate: any, index: number) => ({
+          id: candidate.id,
+          name: candidate.name,
+          title: candidate.title || 'Professional',
+          match: `${Math.round(candidate.matchPercentage)}%`,
+          avatar: candidate.name.split(' ').map((n: string) => n[0]).join(''),
+          linkedInUrl: candidate.linkedinProfileUrl
         }));
 
-        // Combine with existing recommendations, keeping only unique entries
-        const combinedCandidates = [...formattedCandidates, ...candidateRecommendations];
-        const uniqueCandidates = combinedCandidates.filter((candidate, index, self) =>
-          index === self.findIndex(c => c.name === candidate.name)
-        ).slice(0, 8); // Limit to 8 candidates
-
-        setCandidateRecommendations(uniqueCandidates);
+        setCandidateRecommendations(formattedCandidates.slice(0, 8)); // Limit to 8 candidates
+      } catch (error) {
+        console.error('Error fetching selected candidates:', error);
+        toast.error('Failed to load recommended candidates');
       }
-    }
+    };
+
+    fetchSelectedCandidates();
   }, []);
 
   // Data sources

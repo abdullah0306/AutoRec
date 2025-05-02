@@ -57,8 +57,24 @@ export async function searchCandidates(
   page: number = 1
 ): Promise<SearchResponse> {
   const { skills, experience, location } = params;
-  const DESIRED_RESULTS = 5; // Limit to just 5 candidates
-  const resultsPerPage = 10;
+  
+  // Get subscription package limits
+  const email = localStorage.getItem('email');
+  if (!email) {
+    throw new Error('Not authenticated');
+  }
+
+  const response = await axios.get('/api/subscriptions/usage', {
+    headers: {
+      'Authorization': `Bearer ${email}`
+    }
+  });
+
+  const { candidatesPerSearch, remainingUsage } = response.data;
+  
+  if (remainingUsage < candidatesPerSearch) {
+    throw new Error('Not enough candidate profile credits remaining');
+  }
   
   try {
     // Validate required parameters
@@ -82,7 +98,7 @@ export async function searchCandidates(
         keywords: [skills],
         isUrl: false,
         isName: false,
-        limit: DESIRED_RESULTS,
+        limit: candidatesPerSearch,
         location: [searchLoc]
       };
 
@@ -128,7 +144,7 @@ export async function searchCandidates(
         Array.isArray(profile.EXPERIENCE) && 
         profile.EXPERIENCE.length > 0
       )
-      .slice(0, DESIRED_RESULTS) // Ensure we don't exceed desired limit
+      .slice(0, candidatesPerSearch) // Ensure we don't exceed package limit
       .map(profile => {
         const recentExperiences = (profile.EXPERIENCE || [])
           .slice(0, 4)
@@ -183,19 +199,29 @@ export async function searchCandidates(
         };
       });
 
-    // Calculate pagination
-    const offset = (page - 1) * resultsPerPage;
-    const candidates = allProfiles.slice(offset, offset + resultsPerPage);
-    const totalResults = allProfiles.length;
-    const totalPages = Math.ceil(totalResults / resultsPerPage);
+    // Use all profiles without pagination
+    const candidates = allProfiles;
+    const totalResults = candidates.length;
+
+    // Update usage after successful fetch
+    if (candidates.length > 0) {
+      await axios.post('/api/subscriptions/usage', {
+        usageType: 'candidate',
+        count: candidates.length
+      }, {
+        headers: {
+          'Authorization': `Bearer ${email}`
+        }
+      });
+    }
 
     return {
       candidates,
       pagination: {
-        currentPage: page,
-        totalPages,
+        currentPage: 1,
+        totalPages: 1,
         totalResults,
-        hasMore: page < totalPages,
+        hasMore: false,
         searchedLocation: location
       },
       message: candidates.length > 0 ?

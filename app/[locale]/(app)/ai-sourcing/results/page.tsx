@@ -14,8 +14,11 @@ import {
   Briefcase, GraduationCap, User, BookmarkIcon, Filter, Sparkles,
   BarChart3, RefreshCw, Puzzle
 } from "lucide-react";
-import { searchCandidates, CandidateProfile } from "@/lib/api/linkedin-scraper";
+import { searchCandidates } from "@/lib/api/linkedin-scraper";
+
+import type { CandidateProfile } from '@/lib/api/linkedin-scraper';
 import { toast } from "sonner";
+import axios from "axios";
 
 interface AcceptedCandidate extends CandidateProfile {
   matchPercentage: string;
@@ -25,12 +28,13 @@ export default function AISourceResultsPage() {
   const router = useRouter();
   const searchParams = useSearchParams();
   const [candidates, setCandidates] = useState<CandidateProfile[]>([]);
-  const [loading, setLoading] = useState(true);
+  const [loading, setIsLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
   const [activeTab, setActiveTab] = useState("To Review");
   const [eyeStates, setEyeStates] = useState<Record<number, boolean>>({});
   const [searchQuery, setSearchQuery] = useState("");
   const [totalResults, setTotalResults] = useState(0);
+  const [candidatesPerSearch, setCandidatesPerSearch] = useState(0);
   
   // Tab options for candidate status
   const tabOptions = ["To Review", "Snoozed", "Rejected", "Added to Projects"];
@@ -41,15 +45,47 @@ export default function AISourceResultsPage() {
   const experience = searchParams.get("experience") || "";
 
   useEffect(() => {
+    // First get the subscription limits
+    const getSubscriptionLimits = async () => {
+      const email = localStorage.getItem('email');
+      if (!email) {
+        setError("Please log in to search for candidates.");
+        setIsLoading(false);
+        return false;
+      }
+
+      try {
+        const response = await axios.get('/api/subscriptions/usage', {
+          headers: {
+            'Authorization': `Bearer ${email}`
+          }
+        });
+        setCandidatesPerSearch(response.data.candidatesPerSearch);
+        return true;
+      } catch (error: any) {
+        if (error.response?.data?.error === 'No active subscription') {
+          setError("You need an active subscription to search for candidates. Please subscribe to a plan.");
+        } else {
+          setError("Failed to get subscription limits. Please try again.");
+        }
+        setIsLoading(false);
+        return false;
+      }
+    };
+
     const fetchCandidates = async () => {
       if (!skills) {
-        setLoading(false);
+        setIsLoading(false);
         setError("No search criteria provided");
         return;
       }
 
+      // First check subscription limits
+      const hasValidSubscription = await getSubscriptionLimits();
+      if (!hasValidSubscription) return;
+
       try {
-        setLoading(true);
+        setIsLoading(true);
         const result = await searchCandidates({
           skills,
           location,
@@ -66,11 +102,28 @@ export default function AISourceResultsPage() {
         });
         setEyeStates(initialEyeStates);
         
-        setLoading(false);
-      } catch (error) {
+        setIsLoading(false);
+      } catch (error: any) {
         console.error("Error fetching candidates:", error);
+        setIsLoading(false);
+
+        // Handle specific error cases
+        if (error.message === 'Not authenticated') {
+          setError("Please log in to search for candidates.");
+          return;
+        }
+
+        if (error.message === 'Not enough candidate profile credits remaining') {
+          setError("You've reached your monthly candidate profile limit. Please upgrade your plan to continue searching.");
+          return;
+        }
+
+        if (error.response?.data?.error === 'No active subscription') {
+          setError("You need an active subscription to search for candidates. Please subscribe to a plan.");
+          return;
+        }
+
         setError("Failed to fetch candidates. Please try again.");
-        setLoading(false);
       }
     };
 
@@ -94,21 +147,47 @@ export default function AISourceResultsPage() {
   );
 
   // Handle candidate actions
-  const handleAcceptCandidate = (candidate: CandidateProfile) => {
-    // Save to local storage for the main page to access
-    const savedCandidates: AcceptedCandidate[] = JSON.parse(localStorage.getItem('acceptedCandidates') || '[]');
-    savedCandidates.push({
-      ...candidate,
-      matchPercentage: Math.floor(75 + Math.random() * 20) + '%' // Generate a random match percentage between 75-95%
-    });
-    localStorage.setItem('acceptedCandidates', JSON.stringify(savedCandidates));
-    
-    // Remove from current list
-    const updatedCandidates = [...candidates];
-    const candidateIndex = candidates.findIndex(c => c.Name === candidate.Name);
-    if (candidateIndex !== -1) {
-      updatedCandidates.splice(candidateIndex, 1);
-      setCandidates(updatedCandidates);
+  const handleAcceptCandidate = async (candidate: CandidateProfile) => {
+    try {
+      // Save candidate to database
+      const email = localStorage.getItem('email');
+    if (!email) {
+      toast.error('Please log in to save candidates');
+      return;
+    }
+
+    const response = await axios.post('/api/candidates/selected', {
+        linkedinProfileUrl: candidate["LinkedIn Profile Link"],
+        Name: candidate.Name,
+        title: candidate["Most Recent Experience"] || '',
+        Location: candidate.Location,
+        Experience: candidate.Experience,
+        Education: candidate.Education,
+        Skills: candidate.Skills,
+        About: candidate.About,
+        matchPercentage: 85 // You can calculate this based on your matching algorithm
+    }, {
+      headers: {
+        'Authorization': `Bearer ${email}`
+      }
+      });
+
+      if (response.status === 200) {
+        toast.success(`Candidate ${candidate.Name} accepted and saved`);
+        
+        // Remove candidate from current list
+        setCandidates(prevCandidates => 
+          prevCandidates.filter(c => c["LinkedIn Profile Link"] !== candidate["LinkedIn Profile Link"])
+        );
+        
+        // Update total results count
+        setTotalResults(prev => Math.max(0, prev - 1));
+      } else {
+        throw new Error('Failed to save candidate');
+      }
+    } catch (error) {
+      console.error("Error accepting candidate:", error);
+      toast.error("Failed to accept candidate");
     }
     
     toast.success(`${candidate.Name} has been added to recommendations`);
@@ -127,7 +206,7 @@ export default function AISourceResultsPage() {
   };
   
   const handleNotifyCandidate = (candidate: CandidateProfile) => {
-    toast.info(`Notification sent for ${candidate.Name}`);
+    toast.success(`Notification sent to ${candidate.Name}`);
   };
 
   return (
@@ -220,6 +299,9 @@ export default function AISourceResultsPage() {
                     </Avatar>
                     <div>
                       <h3 className="font-medium">{candidate.Name}</h3>
+                      {candidate.Headline && (
+                        <span className="text-muted-foreground"> • {candidate.Headline}</span>
+                      )}
                       <p className="text-sm text-muted-foreground">{candidate.Location} • {candidate.Experience?.[0]?.duration || '8 years experience'}</p>
                     </div>
                   </div>
