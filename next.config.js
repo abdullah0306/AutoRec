@@ -10,9 +10,7 @@ const nextConfig = {
   },
   experimental: {
     serverActions: true,
-    webpackBuildWorker: true,
-    parallelServerBuildTraces: true,
-    parallelServerCompiles: true,
+    serverComponentsExternalPackages: ['@prisma/client', 'bcryptjs'],
   },
   webpack: (config, { isServer }) => {
     if (isServer) {
