@@ -2,9 +2,8 @@ import { NextResponse } from "next/server";
 import { prisma } from "@/lib/prisma-client";
 import { compare } from "bcryptjs";
 
+export const runtime = 'edge';
 export const dynamic = 'force-dynamic';
-export const fetchCache = 'force-no-store';
-export const revalidate = 0;
 
 export async function POST(req: Request) {
   try {
