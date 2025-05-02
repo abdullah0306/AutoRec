@@ -3,7 +3,6 @@ import { prisma } from "@/lib/prisma-client";
 import { hash } from "bcryptjs";
 import { v4 as uuidv4 } from 'uuid';
 
-export const runtime = 'edge';
 export const dynamic = 'force-dynamic';
 
 export async function POST(req: Request) {
