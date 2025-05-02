@@ -1,10 +1,8 @@
 import { NextResponse } from "next/server";
-import { hash } from "bcryptjs";
 import { prisma } from "@/lib/prisma";
-import { v4 as uuidv4 } from "uuid";
+import { createUser } from "@/lib/server-auth";
 
 export const dynamic = 'force-dynamic';
-export const maxDuration = 60;
 
 export async function POST(req: Request) {
   try {
@@ -37,25 +35,13 @@ export async function POST(req: Request) {
       );
     }
 
-    // Hash password
-    const hashedPassword = await hash(password, 12);
-
-    // Generate email verification token
-    const emailVerificationToken = uuidv4();
-    const emailVerificationExpiry = new Date();
-    emailVerificationExpiry.setHours(emailVerificationExpiry.getHours() + 24); // 24 hour expiry
-
-    // Create user
-    const user = await prisma.user.create({
-      data: {
-        username,
-        email,
-        hashed_password: hashedPassword,
-        first_name,
-        last_name,
-        email_verification_token: emailVerificationToken,
-        email_verification_expiry: emailVerificationExpiry,
-      },
+    // Create user using server-side auth
+    const user = await createUser({
+      username,
+      email,
+      password,
+      first_name,
+      last_name,
     });
 
     // TODO: Send verification email

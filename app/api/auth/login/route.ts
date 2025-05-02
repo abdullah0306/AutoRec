@@ -1,32 +1,16 @@
 import { NextResponse } from "next/server";
-import { prisma } from "@/lib/prisma";
-import { compare } from "bcryptjs";
+import { verifyUser } from "@/lib/server-auth";
 
 export const dynamic = 'force-dynamic';
-export const maxDuration = 60;
 
 export async function POST(req: Request) {
   try {
     const { email, password } = await req.json();
 
-    // Find user by email
-    const user = await prisma.user.findUnique({
-      where: {
-        email,
-      },
-    });
+    // Verify user credentials
+    const user = await verifyUser(email, password);
 
     if (!user) {
-      return NextResponse.json(
-        { error: "Invalid email or password" },
-        { status: 401 }
-      );
-    }
-
-    // Compare password
-    const isPasswordValid = await compare(password, user.hashed_password);
-
-    if (!isPasswordValid) {
       return NextResponse.json(
         { error: "Invalid email or password" },
         { status: 401 }
