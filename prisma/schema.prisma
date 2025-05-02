@@ -22,6 +22,7 @@ model User {
   email_verification_token  String?       @unique
   email_verification_expiry DateTime?
   subscription              Subscription?
+  selectedCandidates        SelectedCandidate[]
 
   @@map("users")
 }
@@ -63,4 +64,24 @@ model Subscription {
   user                  User      @relation(fields: [userId], references: [id])
 
   @@map("subscriptions")
+}
+
+model SelectedCandidate {
+  id                String   @id @default(uuid())
+  userId            String
+  linkedinProfileUrl String
+  name              String
+  title             String?
+  location          String?
+  experience        Json?
+  education         Json?
+  skills            String[]
+  summary           String?
+  matchPercentage   Float
+  createdAt         DateTime @default(now())
+  updatedAt         DateTime @updatedAt
+  user              User     @relation(fields: [userId], references: [id])
+
+  @@index([userId])
+  @@map("selected_candidates")
 }

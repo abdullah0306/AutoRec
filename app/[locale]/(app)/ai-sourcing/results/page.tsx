@@ -14,7 +14,9 @@ import {
   Briefcase, GraduationCap, User, BookmarkIcon, Filter, Sparkles,
   BarChart3, RefreshCw, Puzzle
 } from "lucide-react";
-import { searchCandidates, CandidateProfile } from "@/lib/api/linkedin-scraper";
+import { searchCandidates } from "@/lib/api/linkedin-scraper";
+
+import type { CandidateProfile } from '@/lib/api/linkedin-scraper';
 import { toast } from "sonner";
 import axios from "axios";
 
@@ -145,21 +147,47 @@ export default function AISourceResultsPage() {
   );
 
   // Handle candidate actions
-  const handleAcceptCandidate = (candidate: CandidateProfile) => {
-    // Save to local storage for the main page to access
-    const savedCandidates: AcceptedCandidate[] = JSON.parse(localStorage.getItem('acceptedCandidates') || '[]');
-    savedCandidates.push({
-      ...candidate,
-      matchPercentage: Math.floor(75 + Math.random() * 20) + '%' // Generate a random match percentage between 75-95%
-    });
-    localStorage.setItem('acceptedCandidates', JSON.stringify(savedCandidates));
-    
-    // Remove from current list
-    const updatedCandidates = [...candidates];
-    const candidateIndex = candidates.findIndex(c => c.Name === candidate.Name);
-    if (candidateIndex !== -1) {
-      updatedCandidates.splice(candidateIndex, 1);
-      setCandidates(updatedCandidates);
+  const handleAcceptCandidate = async (candidate: CandidateProfile) => {
+    try {
+      // Save candidate to database
+      const email = localStorage.getItem('email');
+    if (!email) {
+      toast.error('Please log in to save candidates');
+      return;
+    }
+
+    const response = await axios.post('/api/candidates/selected', {
+        linkedinProfileUrl: candidate["LinkedIn Profile Link"],
+        Name: candidate.Name,
+        title: candidate["Most Recent Experience"] || '',
+        Location: candidate.Location,
+        Experience: candidate.Experience,
+        Education: candidate.Education,
+        Skills: candidate.Skills,
+        About: candidate.About,
+        matchPercentage: 85 // You can calculate this based on your matching algorithm
+    }, {
+      headers: {
+        'Authorization': `Bearer ${email}`
+      }
+      });
+
+      if (response.status === 200) {
+        toast.success(`Candidate ${candidate.Name} accepted and saved`);
+        
+        // Remove candidate from current list
+        setCandidates(prevCandidates => 
+          prevCandidates.filter(c => c["LinkedIn Profile Link"] !== candidate["LinkedIn Profile Link"])
+        );
+        
+        // Update total results count
+        setTotalResults(prev => Math.max(0, prev - 1));
+      } else {
+        throw new Error('Failed to save candidate');
+      }
+    } catch (error) {
+      console.error("Error accepting candidate:", error);
+      toast.error("Failed to accept candidate");
     }
     
     toast.success(`${candidate.Name} has been added to recommendations`);
@@ -178,7 +206,7 @@ export default function AISourceResultsPage() {
   };
   
   const handleNotifyCandidate = (candidate: CandidateProfile) => {
-    toast.info(`Notification sent for ${candidate.Name}`);
+    toast.success(`Notification sent to ${candidate.Name}`);
   };
 
   return (
@@ -271,6 +299,9 @@ export default function AISourceResultsPage() {
                     </Avatar>
                     <div>
                       <h3 className="font-medium">{candidate.Name}</h3>
+                      {candidate.Headline && (
+                        <span className="text-muted-foreground"> • {candidate.Headline}</span>
+                      )}
                       <p className="text-sm text-muted-foreground">{candidate.Location} • {candidate.Experience?.[0]?.duration || '8 years experience'}</p>
                     </div>
                   </div>
