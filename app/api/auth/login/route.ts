@@ -1,6 +1,8 @@
 import { NextResponse } from "next/server";
-import { prisma } from "@/lib/prisma";
+import { prisma } from "@/lib/prisma-client";
 import { compare } from "bcryptjs";
+
+export const dynamic = 'force-dynamic';
 
 export async function POST(req: Request) {
   try {
@@ -8,8 +10,15 @@ export async function POST(req: Request) {
 
     // Find user by email
     const user = await prisma.user.findUnique({
-      where: {
-        email,
+      where: { email },
+      select: {
+        id: true,
+        username: true,
+        email: true,
+        first_name: true,
+        last_name: true,
+        is_active: true,
+        hashed_password: true,
       },
     });
 
@@ -20,9 +29,8 @@ export async function POST(req: Request) {
       );
     }
 
-    // Compare password
+    // Verify password
     const isPasswordValid = await compare(password, user.hashed_password);
-
     if (!isPasswordValid) {
       return NextResponse.json(
         { error: "Invalid email or password" },

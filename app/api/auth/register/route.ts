@@ -1,7 +1,9 @@
 import { NextResponse } from "next/server";
+import { prisma } from "@/lib/prisma-client";
 import { hash } from "bcryptjs";
-import { prisma } from "@/lib/prisma";
-import { v4 as uuidv4 } from "uuid";
+import { v4 as uuidv4 } from 'uuid';
+
+export const dynamic = 'force-dynamic';
 
 export async function POST(req: Request) {
   try {
@@ -34,15 +36,12 @@ export async function POST(req: Request) {
       );
     }
 
-    // Hash password
+    // Hash password and create user
     const hashedPassword = await hash(password, 12);
-
-    // Generate email verification token
     const emailVerificationToken = uuidv4();
     const emailVerificationExpiry = new Date();
-    emailVerificationExpiry.setHours(emailVerificationExpiry.getHours() + 24); // 24 hour expiry
+    emailVerificationExpiry.setHours(emailVerificationExpiry.getHours() + 24);
 
-    // Create user
     const user = await prisma.user.create({
       data: {
         username,
@@ -52,6 +51,14 @@ export async function POST(req: Request) {
         last_name,
         email_verification_token: emailVerificationToken,
         email_verification_expiry: emailVerificationExpiry,
+      },
+      select: {
+        id: true,
+        username: true,
+        email: true,
+        first_name: true,
+        last_name: true,
+        is_active: true,
       },
     });
 

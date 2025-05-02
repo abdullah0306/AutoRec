@@ -1,5 +1,5 @@
 import type { WebSocketMessage } from "@/types/api";
-import { WS_BASE_URL } from "./api";
+import { WS_BASE_URL } from "./config";
 
 export class WebSocketService {
   private ws: WebSocket | null = null;

@@ -9,9 +9,15 @@ const nextConfig = {
     ignoreBuildErrors: true,
   },
   experimental: {
-    webpackBuildWorker: true,
-    parallelServerBuildTraces: true,
-    parallelServerCompiles: true,
+    serverActions: {
+      allowedOrigins: ['*'],
+    },
+  },
+  webpack: (config, { isServer }) => {
+    if (isServer) {
+      config.externals = [...(config.externals || []), 'bcryptjs'];
+    }
+    return config;
   },
 };
 const withNextIntl = createNextIntlPlugin();
