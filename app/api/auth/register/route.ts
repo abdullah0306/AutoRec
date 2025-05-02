@@ -3,6 +3,9 @@ import { hash } from "bcryptjs";
 import { prisma } from "@/lib/prisma";
 import { v4 as uuidv4 } from "uuid";
 
+export const runtime = 'nodejs';
+export const dynamic = 'force-dynamic';
+
 export async function POST(req: Request) {
   try {
     const data = await req.json();
