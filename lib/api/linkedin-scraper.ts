@@ -1,7 +1,7 @@
 import axios from 'axios';
 
 // API configuration
-const APIFY_TOKEN = 'apify_api_LEMr1gwa1ypr6HvqsnPhBrqy6Uc7nM1VtzLD';
+const APIFY_TOKEN = 'apify_api_44QjgxPbbxWLAtrpjjfemN0hq9q9KX1QcPGi';
 const API_ENDPOINT = 'https://api.apify.com/v2/acts/bebity~linkedin-premium-actor/run-sync-get-dataset-items';
 
 export interface CandidateProfile {
@@ -54,27 +54,16 @@ export interface SearchResponse {
 // Function to search for candidates
 export async function searchCandidates(
   params: SearchParams,
-  page: number = 1
-): Promise<SearchResponse> {
+  email: string
+): Promise<SearchResponse & { candidatesPerSearch: number }> {
   const { skills, experience, location } = params;
   
-  // Get subscription package limits
-  const email = localStorage.getItem('email');
   if (!email) {
     throw new Error('Not authenticated');
   }
 
-  const response = await axios.get('/api/subscriptions/usage', {
-    headers: {
-      'Authorization': `Bearer ${email}`
-    }
-  });
-
-  const { candidatesPerSearch, remainingUsage } = response.data;
-  
-  if (remainingUsage < candidatesPerSearch) {
-    throw new Error('Not enough candidate profile credits remaining');
-  }
+  // Get package limits first
+  let candidatesPerSearch = 15; // Default to Basic plan limit
   
   try {
     // Validate required parameters
@@ -199,13 +188,13 @@ export async function searchCandidates(
         };
       });
 
-    // Use all profiles without pagination
-    const candidates = allProfiles;
+    // Use all profiles without pagination, ensuring we don't exceed the package limit
+    const candidates = allProfiles.slice(0, candidatesPerSearch);
     const totalResults = candidates.length;
 
-    // Update usage after successful fetch
+    // Check credits and update usage if we found candidates
     if (candidates.length > 0) {
-      await axios.post('/api/subscriptions/usage', {
+      const usageResponse = await axios.post('/api/subscriptions/usage', {
         usageType: 'candidate',
         count: candidates.length
       }, {
@@ -213,9 +202,17 @@ export async function searchCandidates(
           'Authorization': `Bearer ${email}`
         }
       });
+
+      if (!usageResponse.data.success) {
+        throw new Error(usageResponse.data.error || 'Not enough credits');
+      }
+
+      // Update candidatesPerSearch from the response
+      candidatesPerSearch = usageResponse.data.candidatesPerSearch || candidatesPerSearch;
     }
 
     return {
+      candidatesPerSearch,
       candidates,
       pagination: {
         currentPage: 1,
