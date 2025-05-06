@@ -25,6 +25,7 @@ export async function POST(req: Request) {
     const data = await req.json();
     const { linkedinProfileUrl, Name, title, Location, Experience, Education, Skills, About, matchPercentage } = data;
 
+    // Create the selected candidate record
     const selectedCandidate = await prisma.selectedCandidate.create({
       data: {
         userId: user.id,
@@ -40,7 +41,10 @@ export async function POST(req: Request) {
       }
     });
 
-    return NextResponse.json(selectedCandidate);
+    return NextResponse.json({
+      success: true,
+      candidate: selectedCandidate
+    });
   } catch (error: any) {
     console.error("Error saving selected candidate:", error);
     return NextResponse.json(

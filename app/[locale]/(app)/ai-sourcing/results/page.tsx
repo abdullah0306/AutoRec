@@ -1,6 +1,6 @@
 "use client";
 
-import { useState, useEffect } from "react";
+import { useState, useEffect, useRef } from "react";
 import { useRouter, useSearchParams } from "next/navigation";
 import { DashboardShell } from "@/components/dashboard-shell";
 import { Card, CardContent } from "@/components/ui/card";
@@ -35,6 +35,7 @@ export default function AISourceResultsPage() {
   const [searchQuery, setSearchQuery] = useState("");
   const [totalResults, setTotalResults] = useState(0);
   const [candidatesPerSearch, setCandidatesPerSearch] = useState(0);
+  const searchInProgress = useRef(false);
   
   // Tab options for candidate status
   const tabOptions = ["To Review", "Snoozed", "Rejected", "Added to Projects"];
@@ -45,55 +46,43 @@ export default function AISourceResultsPage() {
   const experience = searchParams.get("experience") || "";
 
   useEffect(() => {
-    // First get the subscription limits
-    const getSubscriptionLimits = async () => {
-      const email = localStorage.getItem('email');
-      if (!email) {
-        setError("Please log in to search for candidates.");
-        setIsLoading(false);
-        return false;
-      }
-
-      try {
-        const response = await axios.get('/api/subscriptions/usage', {
-          headers: {
-            'Authorization': `Bearer ${email}`
-          }
-        });
-        setCandidatesPerSearch(response.data.candidatesPerSearch);
-        return true;
-      } catch (error: any) {
-        if (error.response?.data?.error === 'No active subscription') {
-          setError("You need an active subscription to search for candidates. Please subscribe to a plan.");
-        } else {
-          setError("Failed to get subscription limits. Please try again.");
-        }
-        setIsLoading(false);
-        return false;
-      }
-    };
-
     const fetchCandidates = async () => {
+      // Skip if already searching
+      if (searchInProgress.current) {
+        return;
+      }
+
       if (!skills) {
         setIsLoading(false);
         setError("No search criteria provided");
         return;
       }
 
-      // First check subscription limits
-      const hasValidSubscription = await getSubscriptionLimits();
-      if (!hasValidSubscription) return;
+      const email = localStorage.getItem('email');
+      if (!email) {
+        setError("Please log in to search for candidates.");
+        setIsLoading(false);
+        return;
+      }
 
       try {
+        searchInProgress.current = true;
         setIsLoading(true);
-        const result = await searchCandidates({
-          skills,
-          location,
-          experience
-        });
         
+        // Search for candidates and update usage in a single transaction
+        const result = await searchCandidates(
+          {
+            skills,
+            location,
+            experience
+          },
+          email
+        );
+        
+        // Update the local state with the results
         setCandidates(result.candidates);
         setTotalResults(result.pagination.totalResults);
+        setCandidatesPerSearch(result.candidatesPerSearch);
         
         // Initialize eye states
         const initialEyeStates: Record<number, boolean> = {};
@@ -124,6 +113,8 @@ export default function AISourceResultsPage() {
         }
 
         setError("Failed to fetch candidates. Please try again.");
+      } finally {
+        searchInProgress.current = false;
       }
     };
 
@@ -172,7 +163,8 @@ export default function AISourceResultsPage() {
       }
       });
 
-      if (response.status === 200) {
+      const data = response.data;
+      if (data.success) {
         toast.success(`Candidate ${candidate.Name} accepted and saved`);
         
         // Remove candidate from current list
@@ -183,7 +175,7 @@ export default function AISourceResultsPage() {
         // Update total results count
         setTotalResults(prev => Math.max(0, prev - 1));
       } else {
-        throw new Error('Failed to save candidate');
+        throw new Error(data.error || 'Failed to save candidate');
       }
     } catch (error) {
       console.error("Error accepting candidate:", error);
