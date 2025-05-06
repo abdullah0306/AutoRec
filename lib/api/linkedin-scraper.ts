@@ -62,8 +62,19 @@ export async function searchCandidates(
     throw new Error('Not authenticated');
   }
 
-  // Get package limits first
-  let candidatesPerSearch = 15; // Default to Basic plan limit
+  // Get user's subscription type and set package limits
+  const subscriptionResponse = await axios.get('/api/me', {
+    headers: {
+      'Authorization': `Bearer ${email}`
+    }
+  });
+
+  if (!subscriptionResponse.data?.subscription?.package?.name) {
+    throw new Error('No active subscription');
+  }
+
+  // Set candidates per search based on package
+  let candidatesPerSearch = subscriptionResponse.data.subscription.package.name === 'Professional' ? 30 : 15;
   
   try {
     // Validate required parameters
