@@ -66,7 +66,7 @@ export function ScrapingProvider({ children }: { children: React.ReactNode }) {
     toast({
       title: "Error",
       description: errorMessage,
-      variant: "destructive",
+      variant: "error",
     });
   };
 
