@@ -1,7 +1,7 @@
 import axios from 'axios';
 
 // Flask API configuration
-const FLASK_API_ENDPOINT = 'http://localhost:5000/api/scrape-contacts';
+const FLASK_API_ENDPOINT = 'https://autorec_scrapper.paragonestimator.com/api/scrape-contacts';
 
 // Set longer timeout for API call
 const API_TIMEOUT = 600000; // 10 minutes timeout for the API call
