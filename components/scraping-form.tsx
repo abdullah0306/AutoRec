@@ -48,7 +48,7 @@ export function ScrapingForm({ className, ...props }: ScrapingFormProps) {
         toast({
           title: "No URLs",
           description: "Please provide at least one URL to scrape",
-          variant: "destructive",
+          variant: "error",
         })
         return
       }
