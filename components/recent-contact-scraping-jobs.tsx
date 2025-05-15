@@ -54,9 +54,33 @@ export function RecentContactScrapingJobs({
     : null;
 
   // Format date for display
-  const formatDate = (dateString: string) => {
-    const date = new Date(dateString);
-    return date.toLocaleString('en-US', {
+  const formatDate = (dateString: string | undefined | null) => {
+    if (!dateString) return formatCurrentDate(); // Use current date as fallback
+    
+    try {
+      const date = new Date(dateString);
+      // Check if date is valid
+      if (isNaN(date.getTime())) {
+        // If invalid, use current date instead of showing N/A
+        return formatCurrentDate();
+      }
+      return date.toLocaleString('en-US', {
+        month: 'short',
+        day: '2-digit',
+        year: 'numeric',
+        hour: '2-digit',
+        minute: '2-digit',
+        hour12: true
+      });
+    } catch (error) {
+      console.error('Error formatting date:', error);
+      return formatCurrentDate(); // Use current date as fallback
+    }
+  };
+  
+  // Helper to format current date consistently
+  const formatCurrentDate = () => {
+    return new Date().toLocaleString('en-US', {
       month: 'short',
       day: '2-digit',
       year: 'numeric',

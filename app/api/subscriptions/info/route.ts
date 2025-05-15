@@ -1,7 +1,5 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { PrismaClient } from '@prisma/client';
-import { getServerSession } from 'next-auth';
-import { authOptions } from '@/lib/auth';
 
 const prisma = new PrismaClient();
 
@@ -19,9 +17,11 @@ export async function GET(req: NextRequest) {
     if (authHeader && authHeader.startsWith('Bearer ')) {
       userEmail = authHeader.substring(7);
     } else {
-      // Fallback to session if no auth header
-      const session = await getServerSession(authOptions);
-      userEmail = session?.user?.email || null;
+      // No authentication provided
+      return NextResponse.json(
+        { error: 'Unauthorized - Please provide authentication' },
+        { status: 401 }
+      );
     }
     
     if (!userEmail) {
@@ -68,7 +68,7 @@ export async function GET(req: NextRequest) {
       monthlyCandidateUsage: user.subscription.monthlyCandidateUsage,
       maxMonthlyScrapes: user.subscription.package?.maxMonthlyScrapes || 50,
       maxMonthlyEmails: user.subscription.package?.maxMonthlyEmails || 100,
-      maxMonthlyCandidates: user.subscription.package?.maxMonthlyCandidates || 50,
+      maxCandidateProfiles: user.subscription.package?.maxCandidateProfiles || 50,
       startDate: user.subscription.startDate,
       endDate: user.subscription.endDate,
       isActive: user.subscription.isActive,

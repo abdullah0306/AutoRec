@@ -1,6 +1,24 @@
 "use client";
 
 import { useScrapingContext } from "@/contexts/scraping-context";
+
+// Helper function to safely format dates
+const formatDate = (dateString: string | undefined | null): string => {
+  if (!dateString) return new Date().toLocaleString(); // Use current date as fallback
+  
+  try {
+    const date = new Date(dateString);
+    // Check if date is valid
+    if (isNaN(date.getTime())) {
+      // If invalid, use current date instead of showing N/A
+      return new Date().toLocaleString();
+    }
+    return date.toLocaleString();
+  } catch (error) {
+    console.error('Error formatting date:', error);
+    return new Date().toLocaleString(); // Use current date as fallback
+  }
+};
 import {
   Card,
   CardContent,
@@ -151,11 +169,11 @@ function WebsiteStatus({ website, currentJob }: WebsiteStatusProps) {
         )}
         <p className="text-xs text-muted-foreground mt-1">
           {website.status === "completed" ? (
-            `Completed ${new Date(website.endTime!).toLocaleString()}`
+            `Completed ${formatDate(website.endTime)}`
           ) : website.status === "scraping" ? (
             `In progress - ${progress}% complete`
           ) : (
-            `Started ${new Date(website.startTime).toLocaleString()}`
+            `Started ${formatDate(website.startTime)}`
           )}
         </p>
       </div>
