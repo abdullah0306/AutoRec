@@ -11,7 +11,6 @@ import { searchContacts, checkActiveScrapingJobs } from "@/lib/api/contact-scrap
 import type { ContactProfile, ActiveJobInfo } from "@/lib/api/contact-scraper";
 import { checkInitialContactScrapingCredits, deductCreditsForContactResults } from "@/lib/api/subscription-usage";
 import { toast } from "@/components/ui/use-toast";
-import { url } from "inspector";
 
 // Helper function to ensure valid date strings
 const formatDateString = (dateStr: string | undefined | null): string => {
@@ -1051,7 +1050,7 @@ export function ContactScrapingProvider({ children }: { children: React.ReactNod
               console.log('No results found, no credits will be deducted');
               toast({
                 title: "No Results Found",
-                description: `No contact information was found for ${url}. No credits have been deducted.`,
+                description: `No contact information was found for ${urls[0]}. No credits have been deducted.`,
                 duration: 5000
               });
             }
