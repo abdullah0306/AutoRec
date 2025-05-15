@@ -26,7 +26,7 @@ export function ContactResultsDialog({ isOpen, onClose, contacts, websiteUrl }: 
             </DialogTitle>
           </DialogHeader>
           <div className="mt-4 text-center py-6">
-            <p className="text-gray-600">No contact information was found on this website.</p>
+            <p className="text-gray-600">This website contains no contact data. No credits have been deducted.</p>
           </div>
           <div className="flex justify-center mt-4">
             <Button onClick={onClose}>Close</Button>

@@ -5,16 +5,25 @@ import time
 from flask_cors import CORS
 
 app = Flask(__name__)
-CORS(app)  # Enable CORS for all routes
+# Update your CORS configuration
+CORS(app, supports_credentials=True, origins=[
+    "https://auto-rec.vercel.app",
+    "http://localhost:3000"
+], methods=["GET", "POST", "OPTIONS"], allow_headers=["Content-Type"])
 
 # Apify configuration
-APIFY_TOKEN = 'apify_api_eAsb8ug4SjvP53qd5KLNhlklm1iqHG34tHfG'
+APIFY_TOKEN = 'apify_api_44QjgxPbbxWLAtrpjjfemN0hq9q9KX1QcPGi'
 ACTOR_ID = 'dainty_screw~contact-info-scraper--extract-business-contact-information'
 
 # Use the direct run endpoint instead of sync endpoint
 RUN_API_ENDPOINT = f"https://api.apify.com/v2/acts/{ACTOR_ID}/runs"
 GET_RUN_ENDPOINT = lambda run_id: f"https://api.apify.com/v2/actor-runs/{run_id}"
 GET_DATASET_ENDPOINT = lambda dataset_id: f"https://api.apify.com/v2/datasets/{dataset_id}/items"
+GET_ACTOR_RUNS = f"https://api.apify.com/v2/actor-runs"
+
+# In-memory storage for active scraping jobs
+# Structure: { 'url': { 'run_id': '123', 'start_time': timestamp, 'completion_time': timestamp, 'status': 'RUNNING'/'COMPLETED'/'FAILED' } }
+active_scraping_jobs = {}
 
 @app.route('/api/scrape-contacts', methods=['POST'])
 def scrape_contacts():
@@ -28,20 +37,21 @@ def scrape_contacts():
     
     # Extract parameters
     urls = data['url'] if isinstance(data['url'], list) else [data['url']]
-    max_pages = data.get('maxPages', 30)
+    max_pages = min(data.get('maxPages', 10), 10)  # Limit to maximum 10 pages
+    max_depth = min(data.get('maxLinkDepth', 2), 2)  # Limit to maximum depth of 2
     include_email = data.get('includeEmail', True)
     include_phone = data.get('includePhone', True)
     include_social = data.get('includeSocial', True)
     
     # Log the request
     print(f"Starting contact scraping for: {urls}")
-    print(f"Parameters: maxPages={max_pages}, includeEmail={include_email}, includePhone={include_phone}, includeSocial={include_social}")
+    print(f"Parameters: maxPages={max_pages}, maxDepth={max_depth}, includeEmail={include_email}, includePhone={include_phone}, includeSocial={include_social}")
     
     # Prepare the Apify request
     actor_input = {
         'startUrls': [{'url': url} for url in urls],
-        'maxPagesPerCrawl': max_pages,
-        'maxCrawlDepth': max_pages,
+        'maxPagesPerCrawl': max_pages,  # Maximum 10 pages
+        'maxCrawlDepth': max_depth,     # Maximum depth of 2
         'extractEmail': include_email,
         'extractPhone': include_phone,
         'extractSocial': include_social,
@@ -61,23 +71,39 @@ def scrape_contacts():
         # Use the same approach as the Apify console - start a run and then poll for results
         try:
             print("Step 1: Starting Apify actor run...")
-            # Start the actor run
-            run_response = requests.post(
-                f"{RUN_API_ENDPOINT}?token={APIFY_TOKEN}",
-                json={
-                    **actor_input,
-                    "timeoutSecs": 300,  # 5 minute timeout - increased from default
-                    "memory": 4096,     # 4GB memory - same as Apify console default
-                    "build": "latest"
-                },
-                timeout=30  # 30 seconds timeout for this initial request
-            )
+            # Log the request data for debugging
+            print(f"Sending request to Apify with URLs: {urls}, max_pages: {max_pages}, max_depth: {max_depth}")
             
-            if run_response.status_code not in [200, 201]:
-                print(f"Error starting Apify run: {run_response.status_code} - {run_response.text}")
+            try:
+                # Start the actor run
+                run_response = requests.post(
+                    f"{RUN_API_ENDPOINT}?token={APIFY_TOKEN}",
+                    json={
+                        **actor_input,
+                        "timeoutSecs": 300,  # 5 minute timeout - increased from default
+                        "memory": 4096,     # 4GB memory - same as Apify console default
+                        "build": "latest"
+                    },
+                    timeout=30  # 30 seconds timeout for this initial request
+                )
+                
+                # Log the response for debugging
+                print(f"Apify response status: {run_response.status_code}")
+                print(f"Apify response body: {run_response.text[:500]}...") # Print first 500 chars to avoid huge logs
+                
+                if run_response.status_code not in [200, 201]:
+                    print(f"Error starting Apify run: {run_response.status_code} - {run_response.text}")
+                    return jsonify({
+                        'success': False,
+                        'error': 'actor_failed_to_start',
+                        'message': f"Error starting Apify run: {run_response.status_code}"
+                    }), 500
+            except Exception as e:
+                print(f"Exception when starting actor: {str(e)}")
                 return jsonify({
                     'success': False,
-                    'message': f"Error starting Apify run: {run_response.status_code}"
+                    'error': 'actor_failed_to_start',
+                    'message': f'Exception when starting actor: {str(e)}'
                 }), 500
                 
             run_data = run_response.json()
@@ -91,6 +117,14 @@ def scrape_contacts():
             run_id = run_data['data']['id']
             print(f"Run started with ID: {run_id}")
             print(f"Monitor at: https://console.apify.com/actors/runs/{run_id}")
+            
+            # Track this job in active_scraping_jobs
+            for url in urls:
+                active_scraping_jobs[url] = {
+                    'run_id': run_id,
+                    'start_time': time.time(),
+                    'status': 'RUNNING'
+                }
             
             # Step 2: Wait for the run to finish (with timeout)
             print("Step 2: Waiting for run to complete...")
@@ -179,6 +213,13 @@ def scrape_contacts():
                             # If the run has completed, try to get the results
                             elif final_status in ['SUCCEEDED', 'FINISHED']:
                                 print(f"Run has completed with status {final_status}. Attempting to fetch results...")
+                                
+                                # Update job status and completion time for all URLs in this run
+                                completion_time = time.time()
+                                for url in urls:
+                                    if url in active_scraping_jobs and active_scraping_jobs[url]['run_id'] == run_id:
+                                        active_scraping_jobs[url]['status'] = 'COMPLETED'
+                                        active_scraping_jobs[url]['completion_time'] = completion_time
                                 dataset_id = final_status_data.get('data', {}).get('defaultDatasetId')
                                 
                                 if dataset_id:
@@ -382,6 +423,37 @@ def scrape_contacts():
                     'message': "No dataset ID found"
                 }), 500
                 
+            # Step 1: Start the actor run
+            print("Step 1: Starting actor run...")
+            print(f"Sending request to Apify with data: {actor_input}")
+            
+            try:
+                response = requests.post(
+                    RUN_API_ENDPOINT,
+                    json=actor_input,
+                    headers={
+                        'Content-Type': 'application/json',
+                        'Authorization': f'Bearer {APIFY_TOKEN}'
+                    }
+                )
+                
+                print(f"Apify response status: {response.status_code}")
+                print(f"Apify response body: {response.text[:500]}...") # Print first 500 chars to avoid huge logs
+                
+                if response.status_code != 201:
+                    return jsonify({
+                        'success': False,
+                        'error': 'actor_failed_to_start',
+                        'message': f'Failed to start scraping actor. Status code: {response.status_code}'
+                    }), 500
+            except Exception as e:
+                print(f"Exception when starting actor: {str(e)}")
+                return jsonify({
+                    'success': False,
+                    'error': 'actor_failed_to_start',
+                    'message': f'Exception when starting actor: {str(e)}'
+                }), 500
+                
             # Step 3: Get the dataset items
             print(f"Step 3: Fetching dataset items from dataset {dataset_id}")
             dataset_response = requests.get(
@@ -549,7 +621,117 @@ def scrape_contacts():
             'success': False,
             'message': f'Error during contact scraping: {str(e)}'
         }), 500
+       
+@app.route('/api/scrape-contacts/status', methods=['GET', 'POST'])
+def check_scraping_status():
+    """
+    Check if a URL is currently being scraped
+    
+    Request (POST):
+    {
+        "urls": ["https://example.com", "https://example.org"]
+    }
+    
+    Response:
+    {
+        "active_jobs": {
+            "https://example.com": {
+                "run_id": "abc123",
+                "start_time": "2025-05-15T10:30:00Z",
+                "status": "RUNNING"
+            }
+        }
+    }
+    """
+    # Clean up stale jobs (older than 30 minutes)
+    current_time = time.time()
+    stale_urls = []
+    for url, job_info in active_scraping_jobs.items():
+        if current_time - job_info.get('start_time', 0) > 1800:  # 30 minutes
+            stale_urls.append(url)
+    
+    for url in stale_urls:
+        del active_scraping_jobs[url]
+    
+    if request.method == 'POST':
+        data = request.json
+        if not data or 'urls' not in data:
+            return jsonify({
+                'success': False,
+                'message': 'URLs are required'
+            }), 400
+        
+        urls = data['urls']
+        if not isinstance(urls, list):
+            urls = [urls]
+        
+        # Check if any of these URLs are currently being scraped
+        active_jobs = {}
+        
+        for url in urls:
+            if url in active_scraping_jobs:
+                job_info = active_scraping_jobs[url]
+                
+                # Check the actual status from Apify
+                try:
+                    status_response = requests.get(
+                        f"{GET_RUN_ENDPOINT(job_info['run_id'])}?token={APIFY_TOKEN}",
+                        timeout=10
+                    )
+                    
+                    if status_response.status_code == 200:
+                        status_data = status_response.json()
+                        current_status = status_data.get('data', {}).get('status', 'UNKNOWN')
+                        
+                        # If the job is no longer running, remove it from active jobs
+                        if current_status in ['SUCCEEDED', 'FINISHED', 'FAILED', 'ABORTED', 'TIMED-OUT']:
+                            del active_scraping_jobs[url]
+                        else:
+                            # Job is still active
+                            active_jobs[url] = {
+                                'run_id': job_info['run_id'],
+                                'start_time': job_info['start_time'],
+                                'status': current_status,
+                                'completion_time': job_info.get('completion_time')
+                            }
+                except Exception as e:
+                    print(f"Error checking job status for {url}: {e}")
+                    # Keep the job in active_jobs if we can't check its status
+                    active_jobs[url] = {
+                        'run_id': job_info['run_id'],
+                        'start_time': job_info['start_time'],
+                        'status': 'UNKNOWN',
+                        'completion_time': job_info.get('completion_time')
+                    }
+        
+        return jsonify({
+            'success': True,
+            'active_jobs': active_jobs
+        })
+    else:  # GET request
+        # Return all active jobs
+        return jsonify({
+            'success': True,
+            'active_jobs': active_scraping_jobs
+        })
 
+@app.route('/health', methods=['GET'])
+def health_check():
+    """
+    Health check endpoint to verify API status
+    
+    Returns:
+    {
+        "status": "success",
+        "message": "Door detection API is running",
+        "version": "1.0.0"
+    }
+    """
+    return jsonify({
+        "status": "success",
+        "message": "Door detection API is running",
+        "version": "1.0.0"
+    })
 if __name__ == '__main__':
-    port = int(os.environ.get('PORT', 5000))
+    port = int(os.environ.get('PORT', 5005))
     app.run(host='0.0.0.0', port=port, debug=True)

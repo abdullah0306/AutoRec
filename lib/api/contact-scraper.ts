@@ -2,6 +2,7 @@ import axios from 'axios';
 
 // Flask API configuration
 const FLASK_API_ENDPOINT = 'https://628c-2a02-4780-28-6eb6-00-1.ngrok-free.app/api/scrape-contacts';
+const FLASK_API_STATUS_ENDPOINT = 'https://628c-2a02-4780-28-6eb6-00-1.ngrok-free.app/api/scrape-contacts/status';
 
 // Set longer timeout for API call
 const API_TIMEOUT = 600000; // 10 minutes timeout for the API call
@@ -47,6 +48,56 @@ export interface SearchResponse {
     searchedUrl: string;
   };
   message: string;
+}
+
+export interface ActiveJobInfo {
+  run_id: string;
+  start_time: number;
+  status: string;
+  completion_time?: number;
+}
+
+export interface CheckActiveJobsResponse {
+  success: boolean;
+  active_jobs: Record<string, ActiveJobInfo>;
+  message?: string;
+}
+
+/**
+ * Check if there are any active scraping jobs for the given URLs
+ * @param urls URLs to check
+ * @returns Object containing active jobs information
+ */
+export async function checkActiveScrapingJobs(urls: string | string[]): Promise<CheckActiveJobsResponse> {
+  try {
+    const urlsArray = Array.isArray(urls) ? urls : [urls];
+    
+    const response = await axios.post(
+      FLASK_API_STATUS_ENDPOINT,
+      { urls: urlsArray },
+      {
+        headers: { 'Content-Type': 'application/json' },
+        timeout: 10000 // 10 seconds timeout
+      }
+    );
+    
+    if (response.data && response.data.success) {
+      return response.data;
+    }
+    
+    return {
+      success: false,
+      active_jobs: {},
+      message: 'Failed to check active jobs'
+    };
+  } catch (error) {
+    console.error('Error checking active scraping jobs:', error);
+    return {
+      success: false,
+      active_jobs: {},
+      message: error instanceof Error ? error.message : 'Unknown error checking active jobs'
+    };
+  }
 }
 
 // Function to search for contact information
@@ -156,6 +207,40 @@ export async function searchContacts(
           // Increase wait time between retries
           await new Promise(resolve => setTimeout(resolve, 5000 * (retryCount + 1))); // Wait longer before retry
           return fetchContacts(targetUrls, retryCount + 1);
+        }
+        
+        // Check if it's a connection error (like 404 Not Found)
+        const isConnectionError = (
+          error.response?.status === 404 || 
+          error.code === 'ECONNREFUSED' || 
+          error.message?.includes('Network Error') ||
+          error.message?.includes('404')
+        );
+        
+        if (isConnectionError) {
+          console.error('API connection error, returning special error flag');
+          return [{
+            name: 'API Connection Error',
+            position: '',
+            company: '',
+            email: 'actor_failed_to_start', // Special flag to prevent credit deduction
+            phone: '',
+            website: targetUrls[0],
+            linkedIn: '',
+            twitter: '',
+            facebook: '',
+            instagram: '',
+            address: '',
+            city: '',
+            state: '',
+            country: '',
+            zipCode: '',
+            industry: '',
+            companySize: '',
+            foundedYear: '',
+            description: `The contact scraping service is currently unavailable. Please check your API connection and try again later.`,
+            source: targetUrls[0]
+          }];
         }
         
         // For other errors, return a contact with error information
