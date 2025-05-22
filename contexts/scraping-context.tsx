@@ -24,8 +24,9 @@ interface ScrapingState {
   error: ScrapingError | null;
   currentJob: ScrapingJob | null;
   websites: Website[];
-  results: BatchResults | null;
+  results: BatchResults | { results: any[] } | null;
   isLoadingResults: boolean;
+  hasSavedResults: boolean;
 }
 
 interface ScrapingContextType extends ScrapingState {
@@ -51,6 +52,7 @@ export function ScrapingProvider({ children }: { children: React.ReactNode }) {
     websites: [],
     results: null,
     isLoadingResults: false,
+    hasSavedResults: false,
   });
 
   const [wsService, setWsService] = useState<WebSocketService | null>(null);
@@ -157,46 +159,42 @@ export function ScrapingProvider({ children }: { children: React.ReactNode }) {
             throw new Error(`Failed to create batch: ${JSON.stringify(errorData)}`);
           }
 
-          // Save each result
-          for (const result of results.results) {
-            const response = await fetch('/api/contact-scraper/save-results', {
-              method: 'POST',
-              headers: {
-                'Content-Type': 'application/json',
-                'Authorization': `Bearer ${email}`,
-              },
-              body: JSON.stringify({
-                batchId,
-                url: result.url,
-                emails: result.emails || [],
-                phones: result.phones || [],
-                addresses: result.addresses || [],
-                postalCodes: result.postal_codes || [],
-                status: result.status || 'completed',
-                error: result.error || null,
-                completedAt: new Date().toISOString(),
-              }),
-            });
+          // Prepare results for batch save
+          const resultsToSave = results.results.map(result => ({
+            batchId,
+            url: result.url,
+            emails: result.emails || [],
+            phones: result.phones || [],
+            addresses: result.addresses || [],
+            postalCodes: result.postal_codes || [],
+            status: result.status || 'completed',
+            error: result.error || null,
+            completedAt: new Date().toISOString(),
+          }));
 
-            if (!response.ok) {
-              const errorData = await response.json().catch(() => ({}));
-              console.error('Failed to save result:', response.status, errorData);
-              continue;
-            }
-            console.log('Successfully saved result for URL:', result.url);
+          // Save all results in a single request
+          const saveResponse = await fetch('/api/contact-scraper/save-results', {
+            method: 'POST',
+            headers: {
+              'Content-Type': 'application/json',
+              'Authorization': `Bearer ${email}`,
+            },
+            body: JSON.stringify({ results: resultsToSave }),
+          });
+
+          if (!saveResponse.ok) {
+            const errorData = await saveResponse.json().catch(() => ({}));
+            throw new Error(`Failed to save results: ${JSON.stringify(errorData)}`);
           }
 
           console.log('Successfully saved all scraping results to database');
           
-          // After saving, fetch the saved results to update the UI
-          const updatedResults = await fetchSavedResults(batchId);
-          if (updatedResults.length > 0) {
-            setState(prev => ({
-              ...prev,
-              results: { results: updatedResults },
-              hasSavedResults: true
-            }));
-          }
+          // Update the UI with the saved results
+          setState(prev => ({
+            ...prev,
+            results: { results: resultsToSave },
+            hasSavedResults: true
+          }));
         } catch (saveError) {
           console.error('Failed to save results to database:', saveError);
         }

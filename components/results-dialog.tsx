@@ -22,25 +22,25 @@ export function ResultsDialog({ result, isOpen, onClose }: ResultsDialogProps) {
     {
       title: "Emails",
       icon: Mail,
-      items: result.emails,
+      items: result.emails || [],
       color: "text-blue-500",
     },
     {
       title: "Phone Numbers",
       icon: Phone,
-      items: result.phones,
+      items: result.phones || [],
       color: "text-green-500",
     },
     {
       title: "Addresses",
       icon: MapPin,
-      items: result.addresses,
+      items: result.addresses || [],
       color: "text-purple-500",
     },
     {
       title: "Postal Codes",
       icon: Hash,
-      items: result.postal_codes,
+      items: result.postal_codes || [],
       color: "text-orange-500",
     },
   ];
