@@ -15,11 +15,13 @@ export class WebSocketService {
 
   connect() {
     try {
-      this.ws = new WebSocket(
-        `${WS_BASE_URL}/scraper/ws/batch/${
-          this.batchId
-        }?token=${localStorage.getItem("accessToken")}`
-      );
+      // Get token if it exists
+      const token = localStorage.getItem("accessToken");
+      const url = token 
+        ? `${WS_BASE_URL}/scraper/ws/batch/${this.batchId}?token=${token}`
+        : `${WS_BASE_URL}/scraper/ws/batch/${this.batchId}`;
+      
+      this.ws = new WebSocket(url);
 
       this.ws.onmessage = (event) => {
         try {

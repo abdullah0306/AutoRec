@@ -23,9 +23,11 @@ export default function MarketingLayout({
               <a href="/terms" className="hover:text-foreground">
                 Terms
               </a>
+              {/* Contact link commented out as per request
               <a href="/contact" className="hover:text-foreground">
                 Contact
               </a>
+              */}
             </div>
           </div>
         </footer>

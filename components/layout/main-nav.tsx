@@ -33,8 +33,8 @@ const publicNavItems: NavItem[] = [
 
 const authenticatedNavItems: NavItem[] = [
   { title: "Dashboard", href: "/dashboard" },
-  { title: "Scrapes", href: "/scrapes" },
-  { title: "Emails", href: "/emails" },
+  // { title: "Scrapes", href: "/scrapes" },
+  // { title: "Emails", href: "/emails" },
   { title: "Settings", href: "/settings" },
 ];
 

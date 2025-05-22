@@ -154,6 +154,7 @@ export function PricingSection() {
           </div>
         )}
 
+        {/* Contact Sales section commented out as per request
         <div className="mt-12 text-center">
           <p className="text-muted-foreground mb-4">
             {t("enterprise.description")}
@@ -162,6 +163,7 @@ export function PricingSection() {
             <Link href="/contact">{t("enterprise.contactSales")}</Link>
           </Button>
         </div>
+        */}
       </div>
     </section>
   );
