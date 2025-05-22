@@ -86,11 +86,17 @@ export function HeroSection() {
                   </div>
                 </div>
                 <div className="flex-1 relative">
-                  <div className="bg-card rounded-lg border p-2 shadow-xl dark:shadow-primary/5 w-full max-w-[360px] mx-auto">
-                    {/* This would ideally be an actual screenshot/image of your app interface */}
-                    <div className="aspect-video bg-muted rounded flex items-center justify-center text-muted-foreground p-4">
-                      <p className="text-sm text-center">Your app screenshot or demo visualization here</p>
-                    </div>
+                  <div className="bg-card rounded-lg border shadow-xl dark:shadow-primary/5 w-full max-w-[360px] mx-auto overflow-hidden">
+                    <video 
+                      autoPlay 
+                      loop 
+                      muted 
+                      playsInline
+                      className="w-full h-auto rounded"
+                    >
+                      <source src="/auto-rec landing page video.mp4" type="video/mp4" />
+                      Your browser does not support the video tag.
+                    </video>
                   </div>
                 </div>
               </div>

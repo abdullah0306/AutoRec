@@ -14,23 +14,23 @@ export async function POST(request: Request) {
     const token = authHeader.split(" ")[1];
     
     // Get the contact scraping results from the request body
-    const { 
-      batchId,
-      url, 
-      emails = [], 
-      phones = [], 
-      addresses = [], 
-      postalCodes = [],
-      status = 'completed',
-      error = null,
-      completedAt
-    } = await request.json();
+    const { results } = await request.json();
 
-    if (!batchId || !url) {
+    if (!results || !Array.isArray(results) || results.length === 0) {
       return NextResponse.json(
-        { error: "Missing required fields (batchId, url)" }, 
+        { error: "No results provided or invalid format" }, 
         { status: 400 }
       );
+    }
+
+    // Validate each result has required fields
+    for (const result of results) {
+      if (!result.batchId || !result.url) {
+        return NextResponse.json(
+          { error: "Each result must include batchId and url" }, 
+          { status: 400 }
+        );
+      }
     }
 
     // Find the user by token (email)
@@ -42,78 +42,111 @@ export async function POST(request: Request) {
       return NextResponse.json({ error: "User not found" }, { status: 404 });
     }
 
-    // Check if this result already exists
-    const existingResult = await prisma.contactScrapingResult.findFirst({
-      where: {
-        batch: {
-          id: batchId
-        },
-        url,
-        user: {
-          id: user.id
-        }
-      }
-    });
+    const savedResults = [];
+    console.log(`Processing ${results.length} results`);
 
-    let result;
-    
-    // First, verify the batch exists
-    const batch = await prisma.scrapingBatch.findUnique({
-      where: { id: batchId }
-    });
+    for (let i = 0; i < results.length; i++) {
+      const result = results[i];
+      console.log(`Processing result ${i + 1}/${results.length} for URL: ${result.url}`);
+      
+      const { 
+        batchId, 
+        url, 
+        emails = [], 
+        phones = [], 
+        addresses = [], 
+        postalCodes = [],
+        status = 'completed',
+        error = null,
+        completedAt 
+      } = result;
 
-    if (!batch) {
-      console.error(`Batch with ID ${batchId} not found`);
-      return NextResponse.json(
-        { error: `Batch with ID ${batchId} not found` },
-        { status: 400 }
-      );
-    }
-    
-    if (existingResult) {
-      // Update existing result
-      result = await prisma.contactScrapingResult.update({
-        where: { id: existingResult.id },
-        data: {
-          emails: { set: emails },
-          phones: { set: phones },
-          addresses: { set: addresses },
-          postalCodes: { set: postalCodes },
-          status: status as any, // Assuming status is a valid enum value
-          error,
-          scrapedAt: new Date(completedAt),
-          updatedAt: new Date()
+      // Check if this result already exists
+      const existingResult = await prisma.contactScrapingResult.findFirst({
+        where: {
+          batch: {
+            id: batchId
+          },
+          url,
+          user: {
+            id: user.id
+          }
         }
       });
-    } else {
-      // Create new result
-      result = await prisma.contactScrapingResult.create({
-        data: {
-          userId: user.id,
-          batchId: batchId,
-          url,
-          emails,
-          phones,
-          addresses,
-          postalCodes,
-          status: status as any, // Assuming status is a valid enum value
-          error,
-          scrapedAt: new Date(completedAt)
+      
+      // Verify the batch exists
+      const batch = await prisma.scrapingBatch.findUnique({
+        where: { id: batchId }
+      });
+
+      if (!batch) {
+        const errorMsg = `Batch with ID ${batchId} not found for URL: ${result.url}`;
+        console.error(errorMsg);
+        continue; // Skip this result if batch not found
+      }
+      
+      let savedResult;
+      
+      try {
+        if (existingResult) {
+          console.log(`Updating existing result for URL: ${url}`);
+          // Update existing result
+          savedResult = await prisma.contactScrapingResult.update({
+          where: { id: existingResult.id },
+          data: {
+            emails: { set: emails },
+            phones: { set: phones },
+            addresses: { set: addresses },
+            postalCodes: { set: postalCodes },
+            status: status as any,
+            error,
+            scrapedAt: new Date(completedAt),
+            updatedAt: new Date()
+          }
+          });
+        } else {
+          console.log(`Creating new result for URL: ${url}`);
+          // Create new result
+          savedResult = await prisma.contactScrapingResult.create({
+          data: {
+            userId: user.id,
+            batchId: batchId,
+            url,
+            emails,
+            phones,
+            addresses,
+            postalCodes,
+            status: status as any,
+            error,
+            scrapedAt: new Date(completedAt)
         }
       });
     }
 
     console.log(`Successfully ${existingResult ? 'updated' : 'saved'} contact scraping results for ${url}. Result ID: ${result.id}`);
 
-    return NextResponse.json({ 
-      success: true, 
-      message: `Contact scraping results ${existingResult ? 'updated' : 'saved'} to database`,
-      resultId: result.id
-    });
+        savedResults.push(savedResult);
+        console.log(`Successfully processed result for URL: ${url}`);
+      } catch (error) {
+        console.error(`Error processing result for URL ${url}:`, error);
+        // Don't rethrow, continue with next result
+      }
+    }
+
+    return NextResponse.json({ success: true, count: savedResults.length });
   } catch (error) {
-    console.error("[SAVE_CONTACT_SCRAPING_RESULTS_ERROR]", error);
+    const errorMessage = error instanceof Error ? error.message : 'Unknown error';
+    console.error('Error in save-results endpoint:', {
+      message: errorMessage,
+      stack: error instanceof Error ? error.stack : undefined,
+      requestBody: request.body ? 'Body exists' : 'No body',
+      resultsCount: results?.length || 0
+    });
     return NextResponse.json(
-      { error: "Failed to save contact scraping results" },
+      { 
+        error: 'Failed to save contact scraping results',
+        details: process.env.NODE_ENV === 'development' ? errorMessage : undefined
+      },
       { status: 500 }
     );
   }

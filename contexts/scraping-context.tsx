@@ -27,6 +27,8 @@ interface ScrapingState {
   results: BatchResults | { results: any[] } | null;
   isLoadingResults: boolean;
   hasSavedResults: boolean;
+  batches: any[];
+  isBatchesLoading: boolean;
 }
 
 interface ScrapingContextType extends ScrapingState {
@@ -37,7 +39,8 @@ interface ScrapingContextType extends ScrapingState {
   updateWebsiteStatus: (id: string, status: WebsiteStatus) => void;
   deleteWebsite: (id: string) => void;
   clearError: () => void;
-  fetchResults: (batchId: string) => Promise<void>;
+  fetchResults: (batchId: string, forceRefresh?: boolean) => Promise<void>;
+  fetchAllBatches: () => Promise<void>;
 }
 
 const ScrapingContext = createContext<ScrapingContextType | undefined>(
@@ -49,6 +52,8 @@ export function ScrapingProvider({ children }: { children: React.ReactNode }) {
     isLoading: false,
     error: null,
     currentJob: null,
+    batches: [],
+    isBatchesLoading: false,
     websites: [],
     results: null,
     isLoadingResults: false,
@@ -56,6 +61,46 @@ export function ScrapingProvider({ children }: { children: React.ReactNode }) {
   });
 
   const [wsService, setWsService] = useState<WebSocketService | null>(null);
+
+  const fetchAllBatches = useCallback(async () => {
+    try {
+      setState(prev => ({ ...prev, isBatchesLoading: true }));
+      const email = localStorage.getItem('email');
+      if (!email) {
+        console.warn('No email found in localStorage');
+        return;
+      }
+
+      const response = await fetch('/api/scraping-batches', {
+        headers: {
+          'Authorization': `Bearer ${email}`,
+        },
+      });
+
+      if (!response.ok) {
+        throw new Error('Failed to fetch scraping batches');
+      }
+
+      const data = await response.json();
+      setState(prev => ({
+        ...prev,
+        batches: data,
+        isBatchesLoading: false
+      }));
+    } catch (error) {
+      console.error('Error fetching scraping batches:', error);
+      setState(prev => ({
+        ...prev,
+        isBatchesLoading: false,
+        error: { message: 'Failed to load scraping batches' }
+      }));
+    }
+  }, []);
+
+  // Initial fetch of batches
+  useEffect(() => {
+    fetchAllBatches();
+  }, [fetchAllBatches]);
 
   const handleError = (error: any) => {
     const errorMessage =
@@ -96,22 +141,24 @@ export function ScrapingProvider({ children }: { children: React.ReactNode }) {
     }
   }, []);
 
-  const fetchResults = useCallback(async (batchId: string) => {
+  const fetchResults = useCallback(async (batchId: string, forceRefresh = false) => {
     try {
       setState((prev) => ({ ...prev, isLoadingResults: true }));
       
-      // First, check if we already have saved results
-      const savedResults = await fetchSavedResults(batchId);
-      
-      if (savedResults && savedResults.length > 0) {
-        console.log('Using saved results from database');
-        setState((prev) => ({
-          ...prev,
-          results: { results: savedResults },
-          isLoadingResults: false,
-          hasSavedResults: true
-        }));
-        return;
+      // Only check saved results if we're not forcing a refresh
+      if (!forceRefresh) {
+        const savedResults = await fetchSavedResults(batchId);
+        
+        if (savedResults && savedResults.length > 0) {
+          console.log('Using saved results from database');
+          setState((prev) => ({
+            ...prev,
+            results: { results: savedResults },
+            isLoadingResults: false,
+            hasSavedResults: true
+          }));
+          return;
+        }
       }
 
       // If no saved results, fetch from scraping service
@@ -159,18 +206,30 @@ export function ScrapingProvider({ children }: { children: React.ReactNode }) {
             throw new Error(`Failed to create batch: ${JSON.stringify(errorData)}`);
           }
 
+          console.log('Raw results from scraper:', JSON.stringify(results, null, 2));
+          
           // Prepare results for batch save
-          const resultsToSave = results.results.map(result => ({
-            batchId,
-            url: result.url,
-            emails: result.emails || [],
-            phones: result.phones || [],
-            addresses: result.addresses || [],
-            postalCodes: result.postal_codes || [],
-            status: result.status || 'completed',
-            error: result.error || null,
-            completedAt: new Date().toISOString(),
-          }));
+          const resultsToSave = results.results.map(result => {
+            console.log('Processing result:', {
+              url: result.url,
+              hasPostalCodes: 'postal_codes' in result || 'postalCodes' in result,
+              keys: Object.keys(result)
+            });
+            
+            return {
+              batchId,
+              url: result.url,
+              emails: result.emails || [],
+              phones: result.phones || [],
+              addresses: result.addresses || [],
+              postalCodes: result.postal_codes || result.postalCodes || [],
+              status: result.status || 'completed',
+              error: result.error || null,
+              completedAt: new Date().toISOString(),
+            };
+          });
+          
+          console.log('Processed results to save:', JSON.stringify(resultsToSave, null, 2));
 
           // Save all results in a single request
           const saveResponse = await fetch('/api/contact-scraper/save-results', {
@@ -415,6 +474,7 @@ export function ScrapingProvider({ children }: { children: React.ReactNode }) {
         deleteWebsite,
         clearError,
         fetchResults,
+        fetchAllBatches,
       }}
     >
       {children}
