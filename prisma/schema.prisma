@@ -23,6 +23,7 @@ model User {
   email_verification_token  String?                 @unique
   email_verification_expiry DateTime?
   contactScrapingResults    ContactScrapingResult[]
+  scrapingBatches          ScrapingBatch[]
   selectedCandidates        SelectedCandidate[]
   subscription              Subscription?
 
@@ -88,23 +89,49 @@ model SelectedCandidate {
   @@map("selected_candidates")
 }
 
-model ContactScrapingResult {
-  id          String   @id @default(uuid())
-  userId      String
-  url         String
-  emails      String[]
-  phones      String[]
-  addresses   String[]
-  postalCodes String[]
-  linkedins   String[]
-  twitters    String[]
-  facebooks   String[]
-  instagrams  String[]
-  completedAt DateTime
-  createdAt   DateTime @default(now())
-  updatedAt   DateTime @updatedAt
-  user        User     @relation(fields: [userId], references: [id])
+model ScrapingBatch {
+  id              String                 @id @default(uuid())
+  userId          String
+  totalUrls       Int
+  successfulUrls  Int
+  failedUrls      Int
+  totalEmails     Int
+  totalPhones     Int
+  totalAddresses  Int
+  totalPostalCodes Int
+  status          String                // "pending", "running", "completed", "failed"
+  startedAt       DateTime?
+  completedAt     DateTime?
+  createdAt       DateTime              @default(now())
+  updatedAt       DateTime              @updatedAt
+  results         ContactScrapingResult[]
+  user            User                  @relation(fields: [userId], references: [id])
 
   @@index([userId])
+  @@index([status])
+  @@map("scraping_batches")
+}
+
+model ContactScrapingResult {
+  id              String    @id @default(uuid())
+  userId          String
+  batchId         String
+  batch           ScrapingBatch @relation(fields: [batchId], references: [id])
+  url             String
+  emails          String[]
+  phones          String[]
+  addresses       String[]
+  postalCodes     String[]
+  error           String?
+  status          String    // "completed", "failed", "pending"
+  scrapedAt       DateTime  @default(now())
+  createdAt       DateTime  @default(now())
+  updatedAt       DateTime  @updatedAt
+  user            User      @relation(fields: [userId], references: [id])
+
+  @@unique([batchId, url])
+  @@index([userId])
+  @@index([batchId])
+  @@index([status])
   @@map("contact_scraping_results")
 }

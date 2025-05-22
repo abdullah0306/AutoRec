@@ -12,6 +12,8 @@ export async function GET(request: Request) {
     }
 
     const email = authHeader.split(" ")[1];
+    const { searchParams } = new URL(request.url);
+    const batchId = searchParams.get('batchId');
     
     // Find the user by email
     const user = await prisma.user.findUnique({
@@ -22,13 +24,31 @@ export async function GET(request: Request) {
       return NextResponse.json({ error: "User not found" }, { status: 404 });
     }
 
-    // Get all contact scraping results for this user from the database
+    // Build the where clause
+    const whereClause: any = {
+      userId: user.id
+    };
+
+    // Add batchId filter if provided
+    if (batchId) {
+      whereClause.batchId = batchId;
+    }
+
+    // Get contact scraping results from the database
     const results = await prisma.contactScrapingResult.findMany({
-      where: {
-        userId: user.id
-      },
+      where: whereClause,
       orderBy: {
         createdAt: 'desc'
+      },
+      include: {
+        batch: {
+          select: {
+            id: true,
+            status: true,
+            createdAt: true,
+            completedAt: true
+          }
+        }
       }
     });
 

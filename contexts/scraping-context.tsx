@@ -70,11 +70,137 @@ export function ScrapingProvider({ children }: { children: React.ReactNode }) {
     });
   };
 
+  // Function to fetch saved results from the database
+  const fetchSavedResults = useCallback(async (batchId: string) => {
+    try {
+      const email = localStorage.getItem('email');
+      if (!email) return [];
+
+      const response = await fetch(`/api/contact-scraper/results?batchId=${batchId}`, {
+        headers: {
+          'Authorization': `Bearer ${email}`,
+        },
+      });
+
+      if (!response.ok) {
+        throw new Error('Failed to fetch saved results');
+      }
+
+      const data = await response.json();
+      return data;
+    } catch (error) {
+      console.error('Error fetching saved results:', error);
+      return [];
+    }
+  }, []);
+
   const fetchResults = useCallback(async (batchId: string) => {
     try {
       setState((prev) => ({ ...prev, isLoadingResults: true }));
+      
+      // First, check if we already have saved results
+      const savedResults = await fetchSavedResults(batchId);
+      
+      if (savedResults && savedResults.length > 0) {
+        console.log('Using saved results from database');
+        setState((prev) => ({
+          ...prev,
+          results: { results: savedResults },
+          isLoadingResults: false,
+          hasSavedResults: true
+        }));
+        return;
+      }
+
+      // If no saved results, fetch from scraping service
       const results = await scraping.getResults(batchId);
-      setState((prev) => ({ ...prev, results, isLoadingResults: false }));
+      setState((prev) => ({
+        ...prev,
+        results,
+        isLoadingResults: false,
+        hasSavedResults: false
+      }));
+
+      // Save results to the database if we have new results
+      if (results?.results?.length > 0) {
+        try {
+          const email = localStorage.getItem('email');
+          if (!email) {
+            console.warn('User email not found in localStorage, skipping save to database');
+            return;
+          }
+
+          // Create or update batch record first
+          const batchResponse = await fetch('/api/scraping-batches', {
+            method: 'POST',
+            headers: {
+              'Content-Type': 'application/json',
+              'Authorization': `Bearer ${email}`,
+            },
+            body: JSON.stringify({
+              batchId,
+              totalUrls: results.total_urls || 1,
+              successfulUrls: results.successful_urls || 0,
+              failedUrls: results.failed_urls || 0,
+              totalEmails: results.statistics?.total_emails || 0,
+              totalPhones: results.statistics?.total_phones || 0,
+              totalAddresses: results.statistics?.total_addresses || 0,
+              totalPostalCodes: results.statistics?.total_postal_codes || 0,
+              status: 'completed',
+              startedAt: results.start_time || new Date().toISOString(),
+              completedAt: results.end_time || new Date().toISOString(),
+            }),
+          });
+
+          if (!batchResponse.ok) {
+            const errorData = await batchResponse.json().catch(() => ({}));
+            throw new Error(`Failed to create batch: ${JSON.stringify(errorData)}`);
+          }
+
+          // Save each result
+          for (const result of results.results) {
+            const response = await fetch('/api/contact-scraper/save-results', {
+              method: 'POST',
+              headers: {
+                'Content-Type': 'application/json',
+                'Authorization': `Bearer ${email}`,
+              },
+              body: JSON.stringify({
+                batchId,
+                url: result.url,
+                emails: result.emails || [],
+                phones: result.phones || [],
+                addresses: result.addresses || [],
+                postalCodes: result.postal_codes || [],
+                status: result.status || 'completed',
+                error: result.error || null,
+                completedAt: new Date().toISOString(),
+              }),
+            });
+
+            if (!response.ok) {
+              const errorData = await response.json().catch(() => ({}));
+              console.error('Failed to save result:', response.status, errorData);
+              continue;
+            }
+            console.log('Successfully saved result for URL:', result.url);
+          }
+
+          console.log('Successfully saved all scraping results to database');
+          
+          // After saving, fetch the saved results to update the UI
+          const updatedResults = await fetchSavedResults(batchId);
+          if (updatedResults.length > 0) {
+            setState(prev => ({
+              ...prev,
+              results: { results: updatedResults },
+              hasSavedResults: true
+            }));
+          }
+        } catch (saveError) {
+          console.error('Failed to save results to database:', saveError);
+        }
+      }
     } catch (error) {
       handleError(error);
       setState((prev) => ({ ...prev, isLoadingResults: false }));
