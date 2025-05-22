@@ -4,6 +4,51 @@ import { prisma } from "@/lib/prisma";
 export const dynamic = 'force-dynamic';
 export const maxDuration = 60;
 
+export async function GET(request: Request) {
+  try {
+    const authHeader = request.headers.get("Authorization");
+    if (!authHeader || !authHeader.startsWith("Bearer ")) {
+      return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
+    }
+
+    const email = authHeader.split(" ")[1];
+    
+    // Find the user by email
+    const user = await prisma.user.findUnique({
+      where: { email }
+    });
+
+    if (!user) {
+      return NextResponse.json({ error: "User not found" }, { status: 404 });
+    }
+
+    // Get all scraping batches for the user
+    const batches = await prisma.scrapingBatch.findMany({
+      where: { userId: user.id },
+      orderBy: { createdAt: 'desc' },
+      include: {
+        results: {
+          select: {
+            url: true,
+            status: true,
+            scrapedAt: true
+          },
+          orderBy: { scrapedAt: 'desc' },
+          take: 1
+        }
+      }
+    });
+
+    return NextResponse.json(batches);
+  } catch (error) {
+    console.error("[GET_SCRAPING_BATCHES_ERROR]", error);
+    return NextResponse.json(
+      { error: "Failed to fetch scraping batches" },
+      { status: 500 }
+    );
+  }
+}
+
 export async function POST(request: Request) {
   try {
     const authHeader = request.headers.get("Authorization");

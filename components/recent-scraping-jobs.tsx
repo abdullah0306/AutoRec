@@ -192,9 +192,37 @@ export function RecentScrapingJobs({
     results,
     currentJob,
     fetchResults,
+    isLoadingResults,
+    batches,
+    isBatchesLoading,
+    fetchAllBatches
   } = useScrapingContext();
 
   const [selectedUrl, setSelectedUrl] = useState<string | null>(null);
+  
+  // Fetch batches and results when component mounts
+  useEffect(() => {
+    const initializeData = async () => {
+      await fetchAllBatches();
+      
+      // Fetch results for completed websites
+      const completedWebsites = websites.filter(website => 
+        website.status === "completed" && website.batchId
+      );
+      
+      // Use a Set to avoid duplicate batch IDs
+      const uniqueBatchIds = new Set(completedWebsites.map(website => website.batchId));
+      
+      // Fetch results for each unique batch ID
+      for (const batchId of uniqueBatchIds) {
+        if (batchId) {
+          await fetchResults(batchId);
+        }
+      }
+    };
+
+    initializeData();
+  }, [fetchAllBatches, websites, fetchResults]);
 
   // Find result for selected URL
   const selectedResult = results?.results?.find(
@@ -284,6 +312,21 @@ export function RecentScrapingJobs({
 
   const JobControls = ({ website }: { website: any }) => (
     <div className="flex items-center gap-2 pr-4">
+      {website.status === "completed" && (
+        <Tooltip>
+          <TooltipTrigger asChild>
+            <Button
+              variant="ghost"
+              size="sm"
+              className="h-8 w-8 p-0"
+              onClick={() => setSelectedUrl(website.url)}
+            >
+              <FileText className="h-4 w-4 text-blue-500" />
+            </Button>
+          </TooltipTrigger>
+          <TooltipContent>View Results</TooltipContent>
+        </Tooltip>
+      )}
       {website.status !== "completed" && website.status !== "failed" && (
         <>
           <Tooltip>
@@ -364,48 +407,129 @@ export function RecentScrapingJobs({
       <Card className={cn("overflow-hidden", className)} {...props}>
         <CardHeader className="border-b bg-muted/30 p-4">
           <div className="flex items-center justify-between">
-            <div>
-              <CardTitle className="text-xl font-semibold">
-                Recent Scraping Jobs
-              </CardTitle>
-              <CardDescription className="text-sm">
-                Manage and monitor your scraping activities
-              </CardDescription>
+            <div className="flex items-center justify-between w-full">
+              <div>
+                <CardTitle className="text-xl font-semibold">
+                  Recent Scraping Jobs
+                </CardTitle>
+                <CardDescription className="text-sm">
+                  Manage and monitor your scraping activities
+                </CardDescription>
+              </div>
+              <div className="flex gap-2">
+                <Button 
+                  variant="outline" 
+                  size="sm" 
+                  onClick={() => {
+                    fetchAllBatches();
+                    // Refresh all completed jobs
+                    const completedWebsites = websites.filter(website => 
+                      website.status === "completed" && website.batchId
+                    );
+                    const uniqueBatchIds = new Set(completedWebsites.map(website => website.batchId));
+                    uniqueBatchIds.forEach(batchId => {
+                      if (batchId) {
+                        fetchResults(batchId, true); // Force refresh
+                      }
+                    });
+                  }}
+                  disabled={isLoadingResults || isBatchesLoading}
+                >
+                  <RefreshCcw className={`h-4 w-4 mr-2 ${isLoadingResults || isBatchesLoading ? 'animate-spin' : ''}`} />
+                  {isLoadingResults || isBatchesLoading ? 'Refreshing...' : 'Refresh All'}
+                </Button>
+              </div>
             </div>
           </div>
         </CardHeader>
         <ScrollArea className="h-[400px]">
           <CardContent className="p-0">
             <div className="divide-y">
-              {websites.slice(0, 5).map((website) => (
-                <div
-                  key={website.id}
-                  className="flex items-center justify-between p-4 hover:bg-muted/50 transition-colors"
-                >
-                  <WebsiteStatus website={website} currentJob={currentJob} />
-                  <JobControls website={website} />
+              {isBatchesLoading ? (
+                <div className="flex items-center justify-center p-8">
+                  <Loader2 className="h-6 w-6 animate-spin text-muted-foreground" />
                 </div>
-              ))}
-
-              {websites.length === 0 && (
-                <div className="flex flex-col items-center justify-center py-12 text-center text-muted-foreground">
-                  <Clock className="h-12 w-12 mb-4 opacity-50" />
-                  <p className="text-sm font-medium">No recent scraping jobs</p>
-                  <p className="text-xs mt-1">
-                    Start a new scraping job to see it here
-                  </p>
-                </div>
+              ) : (
+                <>
+                  {batches.length > 0 ? (
+                    batches.map((batch) => (
+                      <div
+                        key={batch.id}
+                        className="flex items-center justify-between p-4 hover:bg-muted/50 transition-colors"
+                      >
+                        <div className="flex-1">
+                          <div className="flex items-center gap-2">
+                            <span className="text-sm font-medium truncate">
+                              Batch: {batch.id}
+                            </span>
+                            <Badge variant="outline" className="text-xs">
+                              {batch.status}
+                            </Badge>
+                          </div>
+                          <div className="text-xs text-muted-foreground mt-1">
+                            <span>URLs: {batch.totalUrls}</span>
+                            <span className="mx-2">•</span>
+                            <span>Success: {batch.successfulUrls || 0}</span>
+                            <span className="mx-2">•</span>
+                            <span>Failed: {batch.failedUrls || 0}</span>
+                          </div>
+                          <div className="text-xs text-muted-foreground mt-1">
+                            <span>Emails: {batch.totalEmails || 0}</span>
+                            <span className="mx-2">•</span>
+                            <span>Phones: {batch.totalPhones || 0}</span>
+                            <span className="mx-2">•</span>
+                            <span>Addresses: {batch.totalAddresses || 0}</span>
+                          </div>
+                        </div>
+                        <Button
+                          variant="ghost"
+                          size="sm"
+                          onClick={() => {
+                            // Set the selected URL to view results
+                            const website = websites.find(w => w.batchId === batch.id);
+                            if (website) {
+                              setSelectedUrl(website.url);
+                            }
+                          }}
+                        >
+                          <FileText className="h-4 w-4 mr-2" />
+                          View Results
+                        </Button>
+                      </div>
+                    ))
+                  ) : websites.length > 0 ? (
+                    websites.slice(0, 5).map((website) => (
+                      <div
+                        key={website.id}
+                        className="flex items-center justify-between p-4 hover:bg-muted/50 transition-colors"
+                      >
+                        <WebsiteStatus website={website} currentJob={currentJob} />
+                        <JobControls website={website} />
+                      </div>
+                    ))
+                  ) : (
+                    <div className="flex flex-col items-center justify-center py-12 text-center text-muted-foreground">
+                      <Clock className="h-12 w-12 mb-4 opacity-50" />
+                      <p className="text-sm font-medium">No recent scraping jobs</p>
+                      <p className="text-xs mt-1">
+                        Start a new scraping job to see it here
+                      </p>
+                    </div>
+                  )}
+                </>
               )}
             </div>
           </CardContent>
         </ScrollArea>
       </Card>
 
-      <ResultsDialog
-        result={selectedResult}
-        isOpen={!!selectedUrl}
-        onClose={() => setSelectedUrl(null)}
-      />
+      {selectedUrl && (
+        <ResultsDialog
+          result={selectedResult}
+          isOpen={true}
+          onClose={() => setSelectedUrl(null)}
+        />
+      )}
     </>
   );
 }

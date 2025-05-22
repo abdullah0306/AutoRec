@@ -48,7 +48,7 @@ export default function LoginPage() {
         title: common("successTitle"),
         description: t("successMessage"),
       });
-      router.push("/");
+      router.push("/dashboard");
     } catch (error) {
       console.error("Login error:", error);
 
