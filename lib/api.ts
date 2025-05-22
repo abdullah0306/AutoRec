@@ -1,10 +1,10 @@
 import axios, { AxiosError, AxiosRequestConfig } from 'axios';
 import type { ScrapingJob, ScrapingRequest, BatchResults } from '@/types/api';
 
-// Base URLs for different services ...
-export const API_BASE_URL = process.env.NEXT_PUBLIC_SCRAPPER_API_URL || 'https://c935-2a02-4780-28-6eb6-00-1.ngrok-free.app';
-export const SUBSCRIPTION_API_URL = process.env.NEXT_PUBLIC_SUBSCRIPTION_API_URL || 'http://localhost:3000';
-export const WS_BASE_URL = process.env.NEXT_PUBLIC_WS_URL || 'ws://c935-2a02-4780-28-6eb6-00-1.ngrok-free.app';
+// Base URLs for different services
+export const API_BASE_URL = process.env.NEXT_PUBLIC_SCRAPER_API_URL;
+export const SUBSCRIPTION_API_URL = process.env.NEXT_PUBLIC_SUBSCRIPTION_API_URL;
+export const WS_BASE_URL = process.env.NEXT_PUBLIC_WS_URL;
 
 // Create base axios instance configuration
 const createApiClient = (baseURL: string) => {
@@ -14,7 +14,6 @@ const createApiClient = (baseURL: string) => {
       'Content-Type': 'application/json',
       'Accept': 'application/json',
     },
-    withCredentials: true,
     xsrfCookieName: 'csrftoken',
     xsrfHeaderName: 'X-CSRFToken',
   });
@@ -202,7 +201,11 @@ export const scraping = {
   },
 
   getResults: async (batchId: string) => {
-    const response = await apiClient.get<BatchResults>(`/scraper/batch/${batchId}/detailed-results`);
+    const response = await apiClient.get<BatchResults>(`/scraper/batch/${batchId}/detailed-results`, {
+      headers: {
+        'ngrok-skip-browser-warning': 'true'
+      }
+    });
     return response.data;
   },
 };
