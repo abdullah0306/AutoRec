@@ -6,6 +6,7 @@ import {
   useState,
   useCallback,
   useEffect,
+  useRef,
 } from "react";
 import { scraping } from "@/lib/api";
 import { WebSocketService } from "@/lib/websocket";
@@ -18,6 +19,7 @@ import type {
   WebsiteStatus,
 } from "@/types/api";
 import { toast } from "@/components/ui/use-toast";
+import { checkInitialContactScrapingCredits, deductCreditsForContactResults } from "@/lib/api/subscription-usage";
 
 interface ScrapingState {
   isLoading: boolean;
@@ -59,8 +61,83 @@ export function ScrapingProvider({ children }: { children: React.ReactNode }) {
     isLoadingResults: false,
     hasSavedResults: false,
   });
+  
 
   const [wsService, setWsService] = useState<WebSocketService | null>(null);
+  // Track which batches have already had credits deducted (using ref to persist across renders)
+  const processedBatches = useRef<Set<string>>(new Set());
+
+  // Function to handle credit deduction
+  const handleCreditDeduction = useCallback(async (batchId: string, results: any[]) => {
+    // Only process credits if we haven't processed this batch before
+    if (processedBatches.current.has(batchId)) {
+      console.log('Skipping credit deduction for already processed batch:', batchId);
+      return;
+    }
+
+    // Skip if no results
+    if (!results || !Array.isArray(results) || results.length === 0) {
+      console.log('No results to process for batch:', batchId);
+      return;
+    }
+
+    const email = localStorage.getItem('email');
+    if (!email) {
+      console.warn('User email not found in localStorage, skipping credit deduction');
+      return;
+    }
+
+    try {
+      // Calculate credits to deduct based on actual results
+      const resultCounts = results.reduce((acc, result) => {
+        // Only process results with actual data
+        if (!result) return acc;
+        
+        const hasEmail = (result.emails?.length || 0) > 0 ? 1 : 0;
+        const hasPhone = (result.phones?.length || 0) > 0 ? 1 : 0;
+        const hasAddress = (result.addresses?.length || 0) > 0 ? 1 : 0;
+        const hasPostalCode = (result.postal_codes?.length || 0) > 0 ? 1 : 0;
+        
+        // Only count if we have at least one valid result
+        if (hasEmail || hasPhone || hasAddress || hasPostalCode) {
+          acc.emails += hasEmail;
+          acc.phones += hasPhone;
+          acc.addresses += hasAddress;
+          acc.postalCodes += hasPostalCode;
+        }
+        
+        return acc;
+      }, { emails: 0, phones: 0, addresses: 0, postalCodes: 0 });
+      
+      // Only proceed with deduction if we have at least one result
+      const totalResults = resultCounts.emails + resultCounts.phones + 
+                          resultCounts.addresses + resultCounts.postalCodes;
+      
+      if (totalResults === 0) {
+        console.log('No valid results found to deduct credits for batch:', batchId);
+        return;
+      }
+      
+      console.log('Deducting credits for batch:', batchId, 'with counts:', resultCounts);
+      
+      // Mark this batch as processed before making the API call to prevent race conditions
+      processedBatches.current.add(batchId);
+      
+      const deductionResult = await deductCreditsForContactResults(email, resultCounts);
+      
+      if (deductionResult.success) {
+        console.log('Successfully deducted credits for batch:', batchId, 'Credits deducted:', deductionResult.creditsDeducted);
+      } else {
+        // If deduction failed, remove from processed batches so we can retry
+        processedBatches.current.delete(batchId);
+        console.warn('Failed to deduct credits for batch:', batchId, 'Error:', deductionResult.error);
+      }
+    } catch (error) {
+      // If there's an error, remove from processed batches so we can retry
+      processedBatches.current.delete(batchId);
+      console.error('Error during credit deduction:', error);
+    }
+  }, []);
 
   const fetchAllBatches = useCallback(async () => {
     try {
@@ -163,22 +240,28 @@ export function ScrapingProvider({ children }: { children: React.ReactNode }) {
 
       // If no saved results, fetch from scraping service
       const results = await scraping.getResults(batchId);
+      
+      // Update state with results (even if empty)
       setState((prev) => ({
         ...prev,
-        results,
+        results: results || { results: [] },
         isLoadingResults: false,
         hasSavedResults: false
       }));
-
-      // Save results to the database if we have new results
+      
+      // Only process credits and save results if we have actual data
       if (results?.results?.length > 0) {
+        // Process credits for the batch
+        await handleCreditDeduction(batchId, results.results);
+        
+        // Now save results to the database
         try {
           const email = localStorage.getItem('email');
           if (!email) {
             console.warn('User email not found in localStorage, skipping save to database');
             return;
           }
-
+          
           // Create or update batch record first
           const batchResponse = await fetch('/api/scraping-batches', {
             method: 'POST',
@@ -352,6 +435,11 @@ export function ScrapingProvider({ children }: { children: React.ReactNode }) {
     async (urls: string[]) => {
       try {
         setState((prev) => ({ ...prev, isLoading: true, error: null }));
+        
+        const email = localStorage.getItem('email');
+        if (!email) {
+          throw new Error('User not authenticated');
+        }
 
         const job = await scraping.startScraping({
           urls,
