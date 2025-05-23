@@ -36,11 +36,12 @@ export async function checkInitialContactScrapingCredits(
       };
     }
     
-    // Estimate credits needed (average of 10 credits per website as initial estimate)
+    // Estimate credits needed (max 4 credits per website as initial estimate)
     // This is just an estimate for the initial check, actual deduction will be based on results
     const packageName = packageData.packageName || 'Basic';
-    const estimatedCreditsPerSite = 10; // Conservative estimate
-    const estimatedCreditsNeeded = websiteCount * estimatedCreditsPerSite;
+    // Maximum possible credits per website (1 each for email, address, postal code, phone)
+    const maxCreditsPerSite = 4;
+    const estimatedCreditsNeeded = websiteCount * maxCreditsPerSite;
     
     // Call the subscription usage API to check only (no deduction yet)
     const response = await fetch('/api/subscriptions/usage', {
@@ -55,7 +56,7 @@ export async function checkInitialContactScrapingCredits(
         checkOnly: true
       })
     });
-    
+  
     const data = await response.json();
     
     if (!response.ok) {
@@ -100,9 +101,10 @@ export async function checkInitialContactScrapingCredits(
 export async function deductCreditsForContactResults(
   email: string,
   results: {
-    emails: number;
-    phones: number;
-    socialLinks: number; // Combined count of LinkedIn, Twitter, Facebook, Instagram
+    emails: number;          // Number of emails found (1 credit each)
+    phones: number;          // Number of phone numbers found (1 credit each)
+    addresses: number;       // Number of addresses found (1 credit each)
+    postalCodes: number;     // Number of postal codes found (1 credit each)
   }
 ): Promise<{ 
   success: boolean; 
@@ -112,8 +114,15 @@ export async function deductCreditsForContactResults(
 }> {
   try {
     // Calculate credits to deduct based on actual results
-    // 1 credit per email, 1 credit per phone, 1 credit per social media link
-    const creditsToDeduct = results.emails + results.phones + results.socialLinks;
+    // 1 credit per email, 1 credit per phone, 1 credit per address, 1 credit per postal code
+    // But for each website, we only deduct up to 4 credits (one for each type)
+    const creditsToDeduct = Math.min(
+      (results.emails > 0 ? 1 : 0) +
+      (results.phones > 0 ? 1 : 0) +
+      (results.addresses > 0 ? 1 : 0) +
+      (results.postalCodes > 0 ? 1 : 0),
+      4 // Maximum 4 credits per website
+    );
     
     // If no results were found, don't deduct any credits
     if (creditsToDeduct === 0) {
@@ -186,22 +195,22 @@ export async function checkAndDeductContactScrapingCredits(
     const result = await checkInitialContactScrapingCredits(email, websiteCount);
     return {
       ...result,
-      creditsPerScrape: result.estimatedCreditsNeeded ? result.estimatedCreditsNeeded / websiteCount : 10
+      creditsPerScrape: result.estimatedCreditsNeeded ? result.estimatedCreditsNeeded / websiteCount : 4
     };
   } else {
-    // For actual deduction, we'll use a fixed minimum value since we don't have results yet
-    // This should be replaced with the new approach in the contact-scraping-context.tsx
-    const minCreditsPerSite = 5;
+    // For actual deduction, we'll use a fixed value based on the new credit structure
+    const maxCreditsPerSite = 4;
     const result = await deductCreditsForContactResults(email, {
-      emails: minCreditsPerSite * websiteCount,
-      phones: 0,
-      socialLinks: 0
+      emails: 1,
+      phones: 1,
+      addresses: 1,
+      postalCodes: 1
     });
     
     return {
       ...result,
       packageName: 'Unknown', // We don't have this info here
-      creditsPerScrape: minCreditsPerSite
+      creditsPerScrape: maxCreditsPerSite
     };
   }
 }
