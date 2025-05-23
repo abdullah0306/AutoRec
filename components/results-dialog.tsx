@@ -7,10 +7,22 @@ import {
 import { ScrollArea } from "@/components/ui/scroll-area";
 import { Badge } from "@/components/ui/badge";
 import { Mail, Phone, MapPin, Hash } from "lucide-react";
-import type { ScrapingResult } from "@/types/api";
 
 interface ResultsDialogProps {
-  result: ScrapingResult | null | undefined;
+  result: {
+    url: string;
+    startedAt: string;
+    completedAt?: string;
+    status: string;
+    emails?: string[];
+    phones?: string[];
+    addresses?: string[];
+    postalCodes?: string[];
+    totalEmails?: number;
+    totalPhones?: number;
+    totalAddresses?: number;
+    totalPostalCodes?: number;
+  } | null;
   isOpen: boolean;
   onClose: () => void;
 }
@@ -18,39 +30,51 @@ interface ResultsDialogProps {
 export function ResultsDialog({ result, isOpen, onClose }: ResultsDialogProps) {
   if (!result) return null;
 
-  const sections = [
+  const sections = result ? [
     {
       title: "Emails",
       icon: Mail,
       items: result.emails || [],
+      count: result.totalEmails || 0,
       color: "text-blue-500",
     },
     {
       title: "Phone Numbers",
       icon: Phone,
       items: result.phones || [],
+      count: result.totalPhones || 0,
       color: "text-green-500",
     },
     {
       title: "Addresses",
       icon: MapPin,
       items: result.addresses || [],
+      count: result.totalAddresses || 0,
       color: "text-purple-500",
     },
     {
       title: "Postal Codes",
       icon: Hash,
-      items: result.postal_codes || [],
+      items: result.postalCodes || [],
+      count: result.totalPostalCodes || 0,
       color: "text-orange-500",
     },
-  ];
+  ] : [];
 
   return (
     <Dialog open={isOpen} onOpenChange={onClose}>
       <DialogContent className="max-w-2xl max-h-[80vh]">
         <DialogHeader>
           <DialogTitle className="flex items-center justify-between">
-            <span className="truncate">{result.url}</span>
+            <div className="space-y-2">
+              <span className="truncate block text-lg">{result.url}</span>
+              <div className="flex gap-2 text-sm text-muted-foreground">
+                <span>Started: {new Date(result.startedAt).toLocaleString()}</span>
+                {result.completedAt && (
+                  <span>• Completed: {new Date(result.completedAt).toLocaleString()}</span>
+                )}
+              </div>
+            </div>
             <Badge variant={result.status === "completed" ? "default" : "destructive"}>
               {result.status}
             </Badge>

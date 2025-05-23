@@ -222,7 +222,7 @@ export function ScrapingProvider({ children }: { children: React.ReactNode }) {
               emails: result.emails || [],
               phones: result.phones || [],
               addresses: result.addresses || [],
-              postalCodes: result.postal_codes || result.postalCodes || [],
+              postalCodes: result.postal_codes || result.postal_codes || [],
               status: result.status || 'completed',
               error: result.error || null,
               completedAt: new Date().toISOString(),
@@ -293,39 +293,34 @@ export function ScrapingProvider({ children }: { children: React.ReactNode }) {
 
   const handleWebSocketMessage = useCallback((message: WebSocketMessage) => {
     if (message.type === "status_update") {
-      const { data } = message;
-      
-      setState(prev => ({ 
-        ...prev, 
-        currentJob: data,
-        websites: prev.websites.map(website => {
-          if (website.batchId === data.batch_id) {
-            // Website is currently being scraped
-            if (data.active_sites.includes(website.url)) {
+      setState((prev) => {
+        // Update current job status
+        const updatedJob = {
+          ...message.data,
+        };
+
+        // Update website statuses based on active and completed sites
+        const updatedWebsites = prev.websites.map(website => {
+          if (website.batchId === updatedJob.batch_id) {
+            if (updatedJob.active_sites.includes(website.url)) {
               return { 
                 ...website, 
                 status: "scraping" as const,
-                startTime: data.start_time || website.startTime
+                startTime: updatedJob.start_time || website.startTime
               };
-            } 
-            // Website scraping is completed
-            else if (data.completed_sites > 0 && !data.active_sites.includes(website.url)) {
+            } else if (updatedJob.completed_sites > 0 && !updatedJob.active_sites.includes(website.url)) {
               return { 
                 ...website, 
                 status: "completed" as const,
-                endTime: data.end_time || new Date().toISOString()
+                endTime: updatedJob.end_time || new Date().toISOString()
               };
-            }
-            // Website is failed
-            else if (data.failed_sites > 0 && !data.active_sites.includes(website.url)) {
+            } else if (updatedJob.failed_sites > 0 && !updatedJob.active_sites.includes(website.url)) {
               return {
                 ...website,
                 status: "failed" as const,
-                endTime: data.end_time || new Date().toISOString()
+                endTime: updatedJob.end_time || new Date().toISOString()
               };
-            }
-            // Website is pending
-            else if (data.pending_sites > 0) {
+            } else if (updatedJob.pending_sites > 0) {
               return {
                 ...website,
                 status: "pending" as const
@@ -333,13 +328,19 @@ export function ScrapingProvider({ children }: { children: React.ReactNode }) {
             }
           }
           return website;
-        })
-      }));
+        });
 
-      // If job is completed, fetch detailed results
-      if (data.completed_sites === data.total_sites || data.end_time) {
-        fetchResults(data.batch_id);
-      }
+        // If job is completed, fetch detailed results
+        if (updatedJob.completed_sites === updatedJob.total_sites || updatedJob.end_time) {
+          fetchResults(updatedJob.batch_id);
+        }
+
+        return {
+          ...prev,
+          currentJob: updatedJob,
+          websites: updatedWebsites,
+        };
+      });
     }
   }, [fetchResults]);
 

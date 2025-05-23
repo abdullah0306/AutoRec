@@ -4,19 +4,36 @@ import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/com
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table"
 import { Badge } from "@/components/ui/badge"
 import { useScrapingContext } from "@/contexts/scraping-context"
-import type { Website } from "@/types/api"
-import type { ScrapingResult } from "@/types/api"
+import type { Website, WebsiteStatus, ScrapingResult } from "@/types/api"
 import { useRouter } from "next/navigation"
 import { useState } from "react"
 import { FileDown, Mail, Phone, MapPin, Hash } from "lucide-react"
 import { ResultsDialog } from "@/components/results-dialog"
 
-interface WebsiteWithResult extends Website {
-  result?: ScrapingResult;
+interface BatchResult {
+  id: string;
+  userId: string;
+  totalUrls: number;
+  successfulUrls: number;
+  failedUrls: number;
+  totalEmails: number;
+  totalPhones: number;
+  totalAddresses: number;
+  totalPostalCodes: number;
+  status: string;
+  startedAt: string;
+  completedAt: string | null;
+  createdAt: string;
+  updatedAt: string;
+  results: Array<{
+    url: string;
+    status: WebsiteStatus;
+    scrapedAt: string;
+  }>;
 }
 
 export function WebsiteList() {
-  const { websites, results } = useScrapingContext()
+  const { batches, results, fetchResults, websites } = useScrapingContext()
   const router = useRouter()
   const getStatusColor = (status: Website["status"]) => {
     switch (status) {
@@ -74,6 +91,7 @@ export function WebsiteList() {
               </TableRow>
             </TableHeader>
             <TableBody>
+              {/* Show temporary websites first */}
               {websites.map((website) => (
                 <TableRow key={website.id}>
                   <TableCell className="font-medium text-blue-700 dark:text-blue-300">{website.url}</TableCell>
@@ -92,6 +110,43 @@ export function WebsiteList() {
                   </TableCell>
                 </TableRow>
               ))}
+
+              {/* Show database results */}
+              {batches.flatMap((batch: BatchResult) => 
+                batch.results.map((result) => {
+                  // Only show results that aren't already shown in temporary websites
+                  if (!websites.some(w => w.url === result.url)) {
+                    return (
+                      <TableRow key={`${batch.id}-${result.url}`}>
+                        <TableCell className="font-medium text-blue-700 dark:text-blue-300">{result.url}</TableCell>
+                        <TableCell>
+                          <Badge className={`${getStatusColor(result.status)} text-white`}>{result.status}</Badge>
+                        </TableCell>
+                        <TableCell>
+                          {result.status === "completed" && (
+                            <button
+                              onClick={() => {
+                                fetchResults(batch.id);
+                                openModal({
+                                  id: `${batch.id}-${result.url}`,
+                                  url: result.url,
+                                  status: result.status,
+                                  startTime: batch.startedAt,
+                                  batchId: batch.id
+                                });
+                              }}
+                              className="inline-flex items-center rounded-full border px-2.5 py-0.5 text-xs font-semibold transition-colors focus:outline-none focus:ring-2 focus:ring-ring focus:ring-offset-2 bg-blue-500 text-white hover:bg-blue-600"
+                            >
+                              View
+                            </button>
+                          )}
+                        </TableCell>
+                      </TableRow>
+                    );
+                  }
+                  return null;
+                })
+              )}
             </TableBody>
           </Table>
         </div>

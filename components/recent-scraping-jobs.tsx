@@ -199,6 +199,7 @@ export function RecentScrapingJobs({
   } = useScrapingContext();
 
   const [selectedUrl, setSelectedUrl] = useState<string | null>(null);
+  const [dialogResult, setDialogResult] = useState<any>(null);
   
   // Fetch batches and results when component mounts
   useEffect(() => {
@@ -224,10 +225,17 @@ export function RecentScrapingJobs({
     initializeData();
   }, [fetchAllBatches, websites, fetchResults]);
 
-  // Find result for selected URL
-  const selectedResult = results?.results?.find(
-    (result) => result.url === selectedUrl
-  ) || null;  // Convert undefined to null
+  // Find result for selected URL if not already set in dialogResult
+  useEffect(() => {
+    if (selectedUrl && !dialogResult) {
+      const foundResult = results?.results?.find(
+        (result) => result.url === selectedUrl
+      );
+      if (foundResult) {
+        setDialogResult(foundResult);
+      }
+    }
+  }, [selectedUrl, dialogResult, results?.results]);
 
   // Track completion status using currentJob from WebSocket
   const updateJobStatus = useCallback(
@@ -452,51 +460,70 @@ export function RecentScrapingJobs({
               ) : (
                 <>
                   {batches.length > 0 ? (
-                    batches.map((batch) => (
-                      <div
-                        key={batch.id}
-                        className="flex items-center justify-between p-4 hover:bg-muted/50 transition-colors"
-                      >
-                        <div className="flex-1">
-                          <div className="flex items-center gap-2">
-                            <span className="text-sm font-medium truncate">
-                              Batch: {batch.id}
-                            </span>
-                            <Badge variant="outline" className="text-xs">
-                              {batch.status}
-                            </Badge>
-                          </div>
-                          <div className="text-xs text-muted-foreground mt-1">
-                            <span>URLs: {batch.totalUrls}</span>
-                            <span className="mx-2">•</span>
-                            <span>Success: {batch.successfulUrls || 0}</span>
-                            <span className="mx-2">•</span>
-                            <span>Failed: {batch.failedUrls || 0}</span>
-                          </div>
-                          <div className="text-xs text-muted-foreground mt-1">
-                            <span>Emails: {batch.totalEmails || 0}</span>
-                            <span className="mx-2">•</span>
-                            <span>Phones: {batch.totalPhones || 0}</span>
-                            <span className="mx-2">•</span>
-                            <span>Addresses: {batch.totalAddresses || 0}</span>
-                          </div>
-                        </div>
-                        <Button
-                          variant="ghost"
-                          size="sm"
-                          onClick={() => {
-                            // Set the selected URL to view results
-                            const website = websites.find(w => w.batchId === batch.id);
-                            if (website) {
-                              setSelectedUrl(website.url);
-                            }
-                          }}
-                        >
-                          <FileText className="h-4 w-4 mr-2" />
-                          View Results
-                        </Button>
-                      </div>
-                    ))
+                    <div className="relative w-full overflow-auto">
+                      <table className="w-full caption-bottom text-sm">
+                        <thead className="[&_tr]:border-b">
+                          <tr className="border-b transition-colors hover:bg-muted/50 data-[state=selected]:bg-muted">
+                            <th className="h-12 px-4 text-left align-middle font-medium text-muted-foreground [&:has([role=checkbox])]:pr-0">URL</th>
+                            <th className="h-12 px-4 text-left align-middle font-medium text-muted-foreground">Status</th>
+                            <th className="h-12 px-4 text-left align-middle font-medium text-muted-foreground">Actions</th>
+                          </tr>
+                        </thead>
+                        <tbody className="[&_tr:last-child]:border-0">
+                          {batches.map((batch) => (
+                            batch.results?.map((result: any) => (
+                              <tr key={`${batch.id}-${result.url}`} className="border-b transition-colors hover:bg-muted/50 data-[state=selected]:bg-muted">
+                                <td className="p-4 align-middle [&:has([role=checkbox])]:pr-0">
+                                  <span className="font-medium text-blue-700 dark:text-blue-300">{result.url}</span>
+                                </td>
+                                <td className="p-4 align-middle">
+                                  <Badge className={`${getStatusConfig(result.status as WebsiteStatusType).color} text-white`}>
+                                    {result.status}
+                                  </Badge>
+                                </td>
+                                <td className="p-4 align-middle">
+                                  {result.status === "completed" && (
+                                    <Button
+                                      onClick={async () => {
+                                        // First fetch the detailed results
+                                        await fetchResults(batch.id);
+                                        
+                                        // Create a website object from the batch result
+                                        const website: Website = {
+                                          id: `${batch.id}-${result.url}`,
+                                          url: result.url,
+                                          status: result.status as WebsiteStatusType,
+                                          startTime: batch.startedAt || new Date().toISOString(),
+                                          endTime: batch.completedAt || null,
+                                          batchId: batch.id
+                                        };
+                                        
+                                        // Find the detailed results for this URL
+                                        const detailedResult = results?.results?.find(r => r.url === result.url);
+                                        
+                                        // Open the results dialog with the website data
+                                        setSelectedUrl(result.url);
+                                        setDialogResult({
+                                          website,
+                                          emails: detailedResult?.emails || [],
+                                          phones: detailedResult?.phones || [],
+                                          addresses: detailedResult?.addresses || [],
+                                          postalCodes: detailedResult?.postal_codes || detailedResult?.postalCodes || [],
+                                          error: detailedResult?.error || null
+                                        });
+                                      }}
+                                      className="inline-flex items-center rounded-full border px-2.5 py-0.5 text-xs font-semibold transition-colors focus:outline-none focus:ring-2 focus:ring-ring focus:ring-offset-2 bg-blue-500 text-white hover:bg-blue-600"
+                                    >
+                                      View
+                                    </Button>
+                                  )}
+                                </td>
+                              </tr>
+                            ))
+                          ))}
+                        </tbody>
+                      </table>
+                    </div>
                   ) : websites.length > 0 ? (
                     websites.slice(0, 5).map((website) => (
                       <div
@@ -525,9 +552,12 @@ export function RecentScrapingJobs({
 
       {selectedUrl && (
         <ResultsDialog
-          result={selectedResult}
+          result={dialogResult}
           isOpen={true}
-          onClose={() => setSelectedUrl(null)}
+          onClose={() => {
+            setSelectedUrl(null);
+            setDialogResult(null);
+          }}
         />
       )}
     </>

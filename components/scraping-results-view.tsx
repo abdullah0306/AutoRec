@@ -27,7 +27,7 @@ function ResultsSummary({ results }: ResultsSummaryProps) {
     0
   );
   const totalPostalCodes = results?.reduce(
-    (sum, result) => sum + result.postal_codes.length,
+    (sum, result) => sum + (result.postal_codes?.length || result.postal_codes?.length || 0),
     0
   );
 
