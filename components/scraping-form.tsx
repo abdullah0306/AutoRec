@@ -20,6 +20,8 @@ export function ScrapingForm({ className, ...props }: ScrapingFormProps) {
   const [url, setUrl] = useState("")
   const [bulkUrls, setBulkUrls] = useState("")
   const [file, setFile] = useState<File | null>(null)
+  const [startPage, setStartPage] = useState<number | null>(1)
+  const [endPage, setEndPage] = useState<number | null>(null)
   const { isLoading, startScraping } = useScrapingContext()
 
   const handleSubmit = async (e: React.FormEvent) => {
@@ -53,7 +55,19 @@ export function ScrapingForm({ className, ...props }: ScrapingFormProps) {
         return
       }
 
-      await startScraping(urls)
+      // Validate page range if both are provided
+      if (startPage !== null && endPage !== null) {
+        if (startPage > endPage) {
+          toast({
+            title: "Invalid Page Range",
+            description: "Start page cannot be greater than end page",
+            variant: "error",
+          })
+          return
+        }
+      }
+      
+      await startScraping(urls, startPage || undefined, endPage || undefined)
       
       // Clear form
       setUrl("")
@@ -98,6 +112,43 @@ export function ScrapingForm({ className, ...props }: ScrapingFormProps) {
               className="min-h-[120px] resize-y transition-shadow focus-visible:ring-2 focus-visible:ring-primary/30"
             />
           </div>
+
+
+
+          <div className="grid grid-cols-2 gap-4">
+            <div className="space-y-2">
+              <Label htmlFor="startPage" className="text-sm font-medium">Start Page</Label>
+              <Input
+                id="startPage"
+                type="number"
+                min="1"
+                placeholder="1"
+                value={startPage === null ? "" : startPage}
+                onChange={(e) => {
+                  const value = e.target.value === "" ? null : parseInt(e.target.value);
+                  setStartPage(value && !isNaN(value) && value >= 1 ? value : null);
+                }}
+                className="pl-4 pr-4 py-2 h-11 transition-shadow focus-visible:ring-2 focus-visible:ring-primary/30"
+              />
+            </div>
+
+            <div className="space-y-2">
+              <Label htmlFor="endPage" className="text-sm font-medium">End Page</Label>
+              <Input
+                id="endPage"
+                type="number"
+                min="1"
+                placeholder="Optional"
+                value={endPage === null ? "" : endPage}
+                onChange={(e) => {
+                  const value = e.target.value === "" ? null : parseInt(e.target.value);
+                  setEndPage(value && !isNaN(value) && value >= 1 ? value : null);
+                }}
+                className="pl-4 pr-4 py-2 h-11 transition-shadow focus-visible:ring-2 focus-visible:ring-primary/30"
+              />
+            </div>
+          </div>
+          <p className="text-xs text-muted-foreground -mt-2">Optionally specify a range of pages to scrape (e.g., pages 10-20)</p>
 
           <div className="space-y-2">
             <Label className="text-sm font-medium">Upload File</Label>

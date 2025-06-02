@@ -34,7 +34,7 @@ interface ScrapingState {
 }
 
 interface ScrapingContextType extends ScrapingState {
-  startScraping: (urls: string[]) => Promise<void>;
+  startScraping: (urls: string[], startPage?: number, endPage?: number) => Promise<void>;
   stopScraping: () => Promise<void>;
   pauseScraping: () => Promise<void>;
   resumeScraping: () => Promise<void>;
@@ -432,7 +432,7 @@ export function ScrapingProvider({ children }: { children: React.ReactNode }) {
   }, []);
 
   const startScraping = useCallback(
-    async (urls: string[]) => {
+    async (urls: string[], startPage?: number, endPage?: number) => {
       try {
         setState((prev) => ({ ...prev, isLoading: true, error: null }));
         
@@ -441,10 +441,49 @@ export function ScrapingProvider({ children }: { children: React.ReactNode }) {
           throw new Error('User not authenticated');
         }
 
+        // Get user's subscription package limits
+        let maxPagesPerSite = 30; // Default to Basic package limit
+        let concurrentSites = 2; // Default to Basic package limit
+        
+        try {
+          // Attempt to fetch user's subscription info
+          const response = await fetch('/api/subscriptions/info', {
+            headers: {
+              'Authorization': `Bearer ${email}`,
+            },
+          });
+          
+          if (response.ok) {
+            const subscriptionInfo = await response.json();
+            if (subscriptionInfo?.package) {
+              // Use the package limits
+              // Map package names to new page limits
+              if (subscriptionInfo.package.name === 'Basic') {
+                maxPagesPerSite = 30;
+              } else if (subscriptionInfo.package.name === 'Professional') {
+                maxPagesPerSite = 60;
+              } else if (subscriptionInfo.package.name === 'Enterprise') {
+                maxPagesPerSite = 500; // Keep Enterprise at 500
+              } else {
+                // Fallback to package value or default
+                maxPagesPerSite = subscriptionInfo.package.maxPagesPerSite || 30;
+              }
+              concurrentSites = subscriptionInfo.package.concurrentSites || 2;
+            }
+          }
+        } catch (error) {
+          console.warn('Could not fetch subscription info, using default limits:', error);
+        }
+        
+        // If endPage is specified and greater than the package limit, cap it
+        const effectiveEndPage = endPage && endPage > maxPagesPerSite ? maxPagesPerSite : endPage;
+        
         const job = await scraping.startScraping({
           urls,
-          max_pages_per_site: 100,
-          concurrent_sites: 5,
+          max_pages_per_site: maxPagesPerSite,
+          start_page: startPage || 1,
+          end_page: effectiveEndPage || maxPagesPerSite,
+          concurrent_sites: concurrentSites,
         });
 
         // Initialize WebSocket connection

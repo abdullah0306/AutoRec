@@ -63,12 +63,12 @@ export function ResultsDialog({ result, isOpen, onClose }: ResultsDialogProps) {
 
   return (
     <Dialog open={isOpen} onOpenChange={onClose}>
-      <DialogContent className="max-w-2xl max-h-[80vh]">
+      <DialogContent className="max-w-2xl max-h-[90vh] overflow-hidden">
         <DialogHeader>
           <DialogTitle className="flex items-center justify-between">
             <div className="space-y-2">
               <span className="truncate block text-lg">{result.url}</span>
-              <div className="flex gap-2 text-sm text-muted-foreground">
+              <div className="flex flex-wrap gap-2 text-sm text-muted-foreground">
                 <span>Started: {new Date(result.startedAt).toLocaleString()}</span>
                 {result.completedAt && (
                   <span>• Completed: {new Date(result.completedAt).toLocaleString()}</span>
@@ -81,8 +81,8 @@ export function ResultsDialog({ result, isOpen, onClose }: ResultsDialogProps) {
           </DialogTitle>
         </DialogHeader>
         
-        <ScrollArea className="mt-4 max-h-[60vh]">
-          <div className="space-y-6">
+        <ScrollArea className="mt-4 max-h-[60vh] pr-4">
+          <div className="space-y-6 pb-4">
             {sections.map(({ title, icon: Icon, items, color }) => (
               <div key={title} className="space-y-2">
                 <div className="flex items-center gap-2">
@@ -90,11 +90,12 @@ export function ResultsDialog({ result, isOpen, onClose }: ResultsDialogProps) {
                   <h4 className="font-medium">{title} ({items.length})</h4>
                 </div>
                 {items.length > 0 ? (
-                  <div className="grid gap-2 sm:grid-cols-2">
+                  <div className="grid gap-2 sm:grid-cols-2 w-full">
                     {items.map((item, i) => (
                       <div
                         key={i}
-                        className="bg-muted p-2 rounded-md text-sm break-all"
+                        className="bg-muted p-2 rounded-md text-sm overflow-hidden text-ellipsis w-full"
+                        style={{ wordBreak: 'break-word' }}
                       >
                         {item}
                       </div>
