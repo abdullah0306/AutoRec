@@ -43,7 +43,7 @@ export default function AISourcePage() {
     }));
   };
 
-  const tabs = ["Overview", "Data Sources", "Recommendations", "Settings"];
+  // Navigation tabs removed as they were not functional
 
   // Define the candidate type
   type Candidate = {
@@ -109,20 +109,20 @@ export default function AISourcePage() {
     },
     {
       name: "GitHub",
-      connected: true,
-      profiles: "3,217",
+      connected: false,
+      profiles: "0",
       lastUpdated: "Updated 15 min ago"
     },
     {
       name: "Stack Overflow",
-      connected: true,
-      profiles: "2,843",
+      connected: false,
+      profiles: "0",
       lastUpdated: "Updated 1 hour ago"
     },
     {
       name: "Indeed",
-      connected: true,
-      profiles: "4,129",
+      connected: false,
+      profiles: "0",
       lastUpdated: "Updated 30 min ago"
     }
   ];
@@ -183,27 +183,6 @@ export default function AISourcePage() {
           </p>
         </div>
 
-        {/* Navigation Tabs */}
-        <div className="border-b">
-          <div className="flex gap-4 overflow-x-auto">
-            {tabs.map((tab) => (
-              <div key={tab} className="relative">
-                <Button
-                  variant="ghost"
-                  size="sm"
-                  className={`text-sm rounded-lg font-medium px-3 py-1 ${activeTab === tab ? 'text-blue-700' : ''}`}
-                  onClick={() => setActiveTab(tab)}
-                >
-                  {tab}
-                </Button>
-                {activeTab === tab && (
-                  <div className="absolute bottom-0 left-0 right-0 h-0.5 bg-blue-700"></div>
-                )}
-              </div>
-            ))}
-          </div>
-        </div>
-
         {/* Statistics Cards */}
         <div className="grid gap-6 md:grid-cols-3">
           {/* Performance Metrics Card */}
@@ -244,7 +223,7 @@ export default function AISourcePage() {
             <CardContent>
               <h3 className="text-lg font-bold">System Status</h3>
               <p className="text-sm text-muted-foreground mt-2">
-                All data sources are connected and system is running. Last sync: today at 10:23 AM
+                Some data sources are disconnected. System is running. Last sync: today at 10:23 AM
               </p>
               <Button
                 variant="default"
@@ -298,10 +277,10 @@ export default function AISourcePage() {
           </div>
           <div className="space-y-3">
             {dataSources.map((source, index) => (
-              <div key={index} className="flex items-center justify-between py-3 bg-white rounded-lg shadow-sm px-4">
+              <div key={index} className="flex items-center justify-between py-3 bg-card rounded-lg shadow-sm px-4">
                 <div className="flex items-center gap-3 w-1/4">
                   <div className=" flex items-center justify-center">
-                    <Shapes className="h-4 w-4 text-[#000000] fill-black" />
+                    <Shapes className="h-4 w-4 text-foreground" />
                   </div>
                   <div>
                     <h4 className="text-sm font-medium">{source.name}</h4>
@@ -309,11 +288,11 @@ export default function AISourcePage() {
                 </div>
                 <div className="text-sm text-center w-1/4">
                   {source.connected ? (
-                    <Badge variant="outline" className="bg-green-50 border-green-200 text-green-700">
+                    <Badge variant="outline" className="bg-green-50 dark:bg-green-950/30 border-green-200 dark:border-green-800 text-green-700 dark:text-green-400">
                       Connected
                     </Badge>
                   ) : (
-                    <Badge variant="outline" className="bg-red-50 border-red-200 text-red-700">
+                    <Badge variant="outline" className="bg-red-50 dark:bg-red-950/30 border-red-200 dark:border-red-800 text-red-700 dark:text-red-400">
                       Disconnected
                     </Badge>
                   )}
@@ -341,7 +320,7 @@ export default function AISourcePage() {
           </div>
           <div className="space-y-3">
             {candidateRecommendations.map((candidate, index) => (
-              <div key={index} className="flex items-center justify-between py-3 bg-white rounded-lg shadow-sm px-4">
+              <div key={index} className="flex items-center justify-between py-3 bg-card rounded-lg shadow-sm px-4">
                 <div className="flex items-center gap-3 w-1/2">
                   <Avatar className="h-10 w-10 bg-blue-100 text-blue-700">
                     <AvatarFallback>{candidate.avatar}</AvatarFallback>
@@ -401,7 +380,7 @@ export default function AISourcePage() {
           </div>
           <div className="grid grid-cols-1 gap-6">
             {/* Skills Priority */}
-            <div className="bg-white rounded-lg shadow-sm px-4 py-3">
+            <div className="bg-card rounded-lg shadow-sm px-4 py-3">
               <h4 className="text-sm font-medium mb-2">Skills Priority</h4>
               <div className="relative">
                 <Input
@@ -418,7 +397,7 @@ export default function AISourcePage() {
             </div>
 
             {/* Experience Level */}
-            <div className="bg-white rounded-lg shadow-sm px-4 py-3">
+            <div className="bg-card rounded-lg shadow-sm px-4 py-3">
               <h4 className="text-sm font-medium mb-2">Experience Level</h4>
               <div className="relative">
                 <Input
@@ -435,7 +414,7 @@ export default function AISourcePage() {
             </div>
 
             {/* Location Preferences */}
-            <div className="bg-white rounded-lg shadow-sm px-4 py-3">
+            <div className="bg-card rounded-lg shadow-sm px-4 py-3">
               <h4 className="text-sm font-medium mb-2">Location Preferences</h4>
               <div className="relative">
                 <Input
@@ -452,7 +431,7 @@ export default function AISourcePage() {
             </div>
 
             {/* Additional Notes as Textarea */}
-            <div className="bg-white rounded-3xl shadow-sm px-4 py-3">
+            <div className="bg-card rounded-3xl shadow-sm px-4 py-3">
               <h4 className="text-sm font-medium mb-2">Additional Notes</h4>
               <Textarea
                 placeholder="Enter any additional requirements or notes"

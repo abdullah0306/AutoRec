@@ -1,24 +1,12 @@
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card"
 import { Database, FileSpreadsheet, Globe, Clock } from "lucide-react"
 import { cn } from "@/lib/utils"
+import { useState, useEffect } from "react"
+import { getDashboardStats } from "@/lib/api/dashboard-stats"
 
-const overviewItems = [
-  {
-    title: "Total Websites Scraped",
-    value: "1,234",
-    icon: Globe,
-    description: "10% increase from last month",
-    trend: "increase",
-    color: "blue",
-  },
-  {
-    title: "Data Points Collected",
-    value: "1.2M",
-    icon: Database,
-    description: "5% increase from last month",
-    trend: "increase",
-    color: "green",
-  },
+// Static items for cards that don't need to be dynamic
+const staticItems = [
+  // Data Points Collected card removed as requested
   {
     title: "Successful Scrapes",
     value: "98%",
@@ -45,9 +33,49 @@ const colorVariants = {
 }
 
 export function OverviewCards() {
+  const [dashboardStats, setDashboardStats] = useState({
+    totalWebsitesScraped: 0,
+    websitesIncrease: 0,
+    loading: true
+  });
+
+  useEffect(() => {
+    async function fetchDashboardStats() {
+      try {
+        const email = localStorage.getItem('email');
+        if (!email) return;
+        
+        const stats = await getDashboardStats(email);
+        setDashboardStats({
+          totalWebsitesScraped: stats.totalWebsitesScraped,
+          websitesIncrease: stats.websitesIncrease,
+          loading: false
+        });
+      } catch (error) {
+        console.error('Error fetching dashboard stats:', error);
+        setDashboardStats(prev => ({ ...prev, loading: false }));
+      }
+    }
+
+    fetchDashboardStats();
+  }, []);
+
+  // Dynamic card for Total Websites Scraped
+  const dynamicCard = {
+    title: "Total Websites Scraped",
+    value: dashboardStats.loading ? "..." : dashboardStats.totalWebsitesScraped.toLocaleString(),
+    icon: Globe,
+    description: `${dashboardStats.websitesIncrease}% increase from last month`,
+    trend: "increase",
+    color: "blue",
+  };
+
+  // Combine dynamic and static cards
+  const displayItems = [dynamicCard, ...staticItems];
+
   return (
     <>
-      {overviewItems.map((item) => (
+      {displayItems.map((item) => (
         <Card 
           key={item.title} 
           className={cn(
