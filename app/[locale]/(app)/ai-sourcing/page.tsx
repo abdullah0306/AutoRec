@@ -111,19 +111,19 @@ export default function AISourcePage() {
       name: "GitHub",
       connected: false,
       profiles: "0",
-      lastUpdated: "Updated 15 min ago"
+      lastUpdated: "Updated 0 min ago"
     },
     {
       name: "Stack Overflow",
       connected: false,
       profiles: "0",
-      lastUpdated: "Updated 1 hour ago"
+      lastUpdated: "Updated 0 min ago"
     },
     {
       name: "Indeed",
       connected: false,
       profiles: "0",
-      lastUpdated: "Updated 30 min ago"
+      lastUpdated: "Updated 0 min ago"
     }
   ];
 
